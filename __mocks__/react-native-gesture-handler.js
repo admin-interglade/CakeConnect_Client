@@ -1,0 +1,3 @@
+module.exports = {
+  GestureHandlerRootView: 'GestureHandlerRootView',
+};
