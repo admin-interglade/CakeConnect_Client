@@ -3,8 +3,10 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PaperProvider } from 'react-native-paper';
 
 import RootNavigator from './src/navigation/RootNavigator';
+import { paperTheme } from './src/theme';
 import { persistor, store } from './src/store/store';
 
 export default function App() {
@@ -12,7 +14,9 @@ export default function App() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <SafeAreaProvider>
-          <RootNavigator />
+          <PaperProvider theme={paperTheme}>
+            <RootNavigator />
+          </PaperProvider>
         </SafeAreaProvider>
       </PersistGate>
     </Provider>
