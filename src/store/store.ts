@@ -14,10 +14,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import authReducer from './authSlice';
 import ordersReducer from './ordersSlice';
 
+// `whitelist` names keys *inside* the auth slice, not the slice itself.
 const persistConfig = {
-  key: 'root',
+  key: 'auth',
   storage: AsyncStorage,
-  whitelist: ['auth'],
+  whitelist: ['isAuthenticated', 'user', 'token', 'biometricsEnabled'],
 };
 
 const persistedAuthReducer = persistReducer(persistConfig, authReducer);

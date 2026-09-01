@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 
 import AuthNavigator from './AuthNavigator';
 import AppNavigator from './AppNavigator';
+import { navigationTheme } from '../theme';
 import type { RootState } from '../store/store';
 import { type RootStackParamList } from './types';
 
@@ -16,7 +17,7 @@ export default function RootNavigator() {
   );
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <Stack.Screen name="App" component={AppNavigator} />
