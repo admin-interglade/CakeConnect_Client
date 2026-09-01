@@ -117,3 +117,10 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Bundles react-native-vector-icons fonts into the APK. `iconFontNames` keeps
+// only the families the app renders; drop the filter to ship all of them.
+project.ext.vectoricons = [
+    iconFontNames: ['MaterialCommunityIcons.ttf']
+]
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
