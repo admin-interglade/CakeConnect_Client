@@ -1,27 +1,110 @@
 import React from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { StackScreenProps } from '@react-navigation/stack';
+
+import {
+  AppButton,
+  AppText,
+  BrandMark,
+  PhoneNumberInput,
+  Screen,
+} from '../../components';
+import { requestOtp } from '../../services/authApi';
+import { colors, spacing } from '../../constants';
 import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = StackScreenProps<AuthStackParamList, 'Login'>;
 
+const DIAL_CODE = '+91';
+const NUMBER_LENGTH = 10;
+const OTP_LENGTH = 6;
+
 export default function LoginScreen({ navigation }: Props) {
-  const [identifier, setIdentifier] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [role, setRole] = React.useState<'shopOwner' | 'admin'>('shopOwner');
+  const [nationalNumber, setNationalNumber] = React.useState('');
+  const [error, setError] = React.useState<string | undefined>();
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const isValid = nationalNumber.length === NUMBER_LENGTH;
+
+  const handleContinue = React.useCallback(async () => {
+    if (!isValid) {
+      setError(`Enter a valid ${NUMBER_LENGTH}-digit mobile number.`);
+      return;
+    }
+
+    setError(undefined);
+    setSubmitting(true);
+
+    try {
+      const { resendAfterSeconds } = await requestOtp(`${DIAL_CODE}${nationalNumber}`);
+      navigation.navigate('Verification', {
+        dialCode: DIAL_CODE,
+        nationalNumber,
+        resendAfterSeconds,
+      });
+    } catch {
+      setError('Could not send the code. Check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [isValid, nationalNumber, navigation]);
 
   return (
-    <SafeAreaView style={styles.safe}><View style={styles.container}>
-      <Text style={styles.kicker}>CAKECONNECT</Text><Text style={styles.title}>Welcome back.</Text><Text style={styles.subtitle}>Manage your bakery orders with calm, clear control.</Text>
-      <Text style={styles.label}>Email or phone</Text><TextInput autoCapitalize="none" keyboardType="email-address" placeholder="you@bakery.com" placeholderTextColor="#A79A91" style={styles.input} value={identifier} onChangeText={setIdentifier} />
-      <Text style={styles.label}>Password</Text><TextInput placeholder="Enter your password" placeholderTextColor="#A79A91" secureTextEntry style={styles.input} value={password} onChangeText={setPassword} />
-      <View style={styles.roleHeader}><Text style={styles.label}>Continue as</Text><Text style={styles.flag}>DEMO FLAG</Text></View><View style={styles.roles}>
-        <Pressable style={[styles.role, role === 'shopOwner' && styles.selectedRole]} onPress={() => setRole('shopOwner')}><Text style={[styles.roleText, role === 'shopOwner' && styles.selectedRoleText]}>Shop owner</Text></Pressable>
-        <Pressable style={[styles.role, role === 'admin' && styles.selectedRole]} onPress={() => setRole('admin')}><Text style={[styles.roleText, role === 'admin' && styles.selectedRoleText]}>Admin</Text></Pressable>
-      </View><Pressable style={styles.button} onPress={() => navigation.navigate('OTP', { phone: identifier || '+91 99999 99999', role })}><Text style={styles.buttonText}>Continue to verification</Text></Pressable><Text style={styles.note}>Backend authentication will connect here later.</Text>
-    </View></SafeAreaView>
+    <Screen
+      scrollable
+      footer={
+        <View>
+          <AppButton
+            label="Continue"
+            onPress={handleContinue}
+            disabled={!isValid}
+            loading={submitting}
+            testID="login-continue"
+          />
+          <AppText variant="caption" align="center" style={styles.legal}>
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </AppText>
+        </View>
+      }
+    >
+      <View style={styles.content}>
+        <BrandMark caption="Secure Portal" style={styles.brand} />
+
+        <AppText variant="h2" style={styles.title}>
+          Enter your mobile number
+        </AppText>
+
+        <AppText variant="bodySecondary" style={styles.subtitle}>
+          We&apos;ll send a {OTP_LENGTH}-digit OTP to verify your franchise
+          credentials.
+        </AppText>
+
+        <PhoneNumberInput
+          value={nationalNumber}
+          onChangeValue={next => {
+            setNationalNumber(next);
+            if (error) {
+              setError(undefined);
+            }
+          }}
+          dialCode={DIAL_CODE}
+          maxLength={NUMBER_LENGTH}
+          error={error}
+          autoFocus
+          onSubmit={handleContinue}
+          submitDisabled={!isValid || submitting}
+          style={styles.field}
+        />
+      </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({ safe: { backgroundColor: '#F8F5F0', flex: 1 }, container: { flex: 1, justifyContent: 'center', padding: 28 }, kicker: { color: '#A85B3F', fontSize: 12, fontWeight: '800', letterSpacing: 2 }, title: { color: '#2B2521', fontSize: 38, fontWeight: '800', marginTop: 12 }, subtitle: { color: '#7C716A', fontSize: 15, lineHeight: 22, marginBottom: 34, marginTop: 8 }, label: { color: '#4A403A', fontSize: 13, fontWeight: '700', marginBottom: 8, marginTop: 17 }, input: { backgroundColor: '#FFFDFC', borderColor: '#E3DAD1', borderRadius: 12, borderWidth: 1, color: '#2B2521', fontSize: 15, padding: 15 }, roleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }, flag: { backgroundColor: '#F2D9C7', borderRadius: 5, color: '#A85B3F', fontSize: 10, fontWeight: '800', paddingHorizontal: 7, paddingVertical: 4 }, roles: { flexDirection: 'row', gap: 10 }, role: { borderColor: '#DED6CE', borderRadius: 10, borderWidth: 1, flex: 1, padding: 13 }, selectedRole: { backgroundColor: '#2B2521', borderColor: '#2B2521' }, roleText: { color: '#6D625C', textAlign: 'center' }, selectedRoleText: { color: '#FFF9F3', fontWeight: '700' }, button: { alignItems: 'center', backgroundColor: '#A85B3F', borderRadius: 12, marginTop: 26, padding: 16 }, buttonText: { color: '#FFF9F3', fontSize: 15, fontWeight: '800' }, note: { color: '#9A8D84', fontSize: 12, marginTop: 14, textAlign: 'center' },
+const styles = StyleSheet.create({
+  content: { flex: 1, justifyContent: 'center' },
+  brand: { marginBottom: spacing.giant },
+  title: { marginBottom: spacing.sm },
+  subtitle: { marginBottom: spacing.xxl },
+  field: { marginBottom: spacing.lg },
+  legal: { marginTop: spacing.md, color: colors.textMuted },
 });
