@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
-import { textVariants, type TextVariant } from '../constants';
+import { textVariants, type TextVariant } from '../../constants';
 
 export type AppTextProps = TextProps & {
   variant?: TextVariant;

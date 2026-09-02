@@ -91,6 +91,7 @@ Use a React Native app with a bare workflow (not Expo), to allow better control 
 ### Storage
 - AsyncStorage for lightweight local persistence
 - SQLite for structured local data and offline order records
+- MMKV forAuth tokens, settings, small state persistence
 
 ### UI libraries
 - Native Base or React Native Paper

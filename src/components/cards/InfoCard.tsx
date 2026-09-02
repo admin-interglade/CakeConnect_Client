@@ -1,14 +1,14 @@
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import AppText from './AppText';
+import AppText from '../ui/AppText';
 import {
   borderRadius,
   borderWidth,
   colors,
   elevation,
   spacing,
-} from '../constants';
+} from '../../constants';
 
 type InfoCardProps = {
   title: string;

@@ -7,9 +7,9 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import Icon from './Icon';
+import Icon from '../ui/Icon';
 
-import AppText from './AppText';
+import AppText from '../ui/AppText';
 import {
   borderRadius,
   borderWidth,
@@ -19,7 +19,7 @@ import {
   layout,
   spacing,
   textVariants,
-} from '../constants';
+} from '../../constants';
 
 type PhoneNumberInputProps = {
   value: string;

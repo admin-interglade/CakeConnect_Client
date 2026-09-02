@@ -5,7 +5,7 @@ import type { ImageSourcePropType } from 'react-native';
  *
  * Raster exports only — SVGs need react-native-svg + a Metro transformer,
  * which this project deliberately does not depend on. Export icons as glyphs
- * from MaterialCommunityIcons via `components/Icon` instead.
+ * from MaterialCommunityIcons via `components/ui/Icon` instead.
  */
 
 /** Bakery photograph on the welcome screen (exported as `splashImg.png`). */

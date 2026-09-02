@@ -1,10 +1,9 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import Icon from '../../components/Icon';
 import { useDispatch } from 'react-redux';
 import type { StackScreenProps } from '@react-navigation/stack';
 
-import { AppButton, AppText, Avatar, InfoCard, Screen } from '../../components';
+import { AppButton, AppText, Avatar, Icon, InfoCard, Screen } from '../../components';
 import { setCredentials } from '../../store/authSlice';
 import type { AppDispatch } from '../../store/store';
 import {

@@ -3,7 +3,7 @@ import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native'
 import Icon from './Icon';
 
 import AppText from './AppText';
-import { borderRadius, colors, iconSize, imageSize } from '../constants';
+import { borderRadius, colors, iconSize, imageSize } from '../../constants';
 
 type AvatarProps = {
   /** Falls back to initials, then to a generic person glyph. */

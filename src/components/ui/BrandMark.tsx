@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import AppText from './AppText';
-import { borderRadius, colors, fontSize, imageSize, spacing } from '../constants';
+import { borderRadius, colors, fontSize, imageSize, spacing } from '../../constants';
 
 type BrandMarkProps = {
   /** Small uppercase strapline under the wordmark, e.g. "SECURE PORTAL". */

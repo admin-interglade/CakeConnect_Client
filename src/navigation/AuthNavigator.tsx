@@ -7,6 +7,7 @@ import {
 import SplashScreen from '../screens/auth/SplashScreen';
 import LandingScreen from '../screens/auth/LandingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
+import OtpLoginScreen from '../screens/auth/OtpLoginScreen';
 import VerificationScreen from '../screens/auth/VerificationScreen';
 import ProfileScreen from '../screens/auth/ProfileScreen';
 import BiometricScreen from '../screens/auth/BiometricScreen';
@@ -33,6 +34,7 @@ export default function AuthNavigator() {
       />
       <Stack.Screen name="Landing" component={LandingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="OtpLogin" component={OtpLoginScreen} />
       <Stack.Screen name="Verification" component={VerificationScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Biometric" component={BiometricScreen} />

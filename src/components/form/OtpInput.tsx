@@ -8,14 +8,14 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import AppText from './AppText';
+import AppText from '../ui/AppText';
 import {
   borderRadius,
   borderWidth,
   colors,
   controlHeight,
   spacing,
-} from '../constants';
+} from '../../constants';
 
 type OtpInputProps = {
   value: string;

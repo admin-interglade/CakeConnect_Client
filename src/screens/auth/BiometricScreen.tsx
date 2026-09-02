@@ -1,9 +1,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import Icon from '../../components/Icon';
 import type { StackScreenProps } from '@react-navigation/stack';
 
-import { AppButton, AppText, BrandMark, Screen } from '../../components';
+import { AppButton, AppText, BrandMark, Icon, Screen } from '../../components';
 import {
   describeBiometric,
   enableBiometrics,
