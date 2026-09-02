@@ -1,4 +1,5 @@
 import type { UserRole } from '../store/authSlice';
+import type { OrderStatus } from '../types/admin';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -34,7 +35,10 @@ export type PendingSession = {
 export type AuthStackParamList = {
   Splash: undefined;
   Landing: undefined;
+  /** Identifier + password sign-in, the default entry point. */
   Login: undefined;
+  /** FR-1 mobile-number + OTP sign-in, reached from the login screen. */
+  OtpLogin: undefined;
   Verification: {
     dialCode: string;
     nationalNumber: string;
@@ -71,4 +75,46 @@ export type PaymentsStackParamList = {
 export type AccountStackParamList = {
   AccountHome: undefined;
   Profile: undefined;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Admin (franchise owner)                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Three tabs, each owning a stack. Details are pushed inside their tab's stack
+ * so the tab bar stays visible and the back gesture returns to the list the
+ * admin came from.
+ */
+export type AdminTabParamList = {
+  DashboardTab: undefined;
+  ShopsTab: undefined;
+  OrdersTab: undefined;
+};
+
+export type AdminDashboardStackParamList = {
+  AdminDashboard: undefined;
+  /** FR-37 — the full consolidated plan; defaults to tomorrow's delivery. */
+  ProductionPlan: { deliveryDate?: string } | undefined;
+  ProductionDetail: { deliveryDate: string; productId: string };
+  /** Batch B placeholders, routed now so dashboard quick actions never dead-end. */
+  Catalogue: undefined;
+  CutoffSettings: undefined;
+  Offers: undefined;
+  PaymentsQueue: undefined;
+  Reports: undefined;
+};
+
+export type AdminShopsStackParamList = {
+  ShopsList: undefined;
+  ShopDetails: { shopId?: string; mode?: 'view' | 'edit' | 'create' };
+  /** Reached from a shop's order history. */
+  OrderDetails: { orderId: string };
+};
+
+export type AdminOrdersStackParamList = {
+  /** Pre-filtered when a dashboard tile deep-links into the queue. */
+  OrdersList: { status?: OrderStatus | 'pending_cutoff'; shopId?: string } | undefined;
+  OrderDetails: { orderId: string };
+  ShopDetails: { shopId?: string; mode?: 'view' | 'edit' | 'create' };
 };

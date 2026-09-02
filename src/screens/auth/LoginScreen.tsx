@@ -6,48 +6,85 @@ import {
   AppButton,
   AppText,
   BrandMark,
-  PhoneNumberInput,
+  InlineMessage,
+  LabeledInput,
+  PasswordInput,
   Screen,
 } from '../../components';
-import { requestOtp } from '../../services/authApi';
+import { loginWithPassword } from '../../services/authApi';
 import { colors, spacing } from '../../constants';
-import type { AuthStackParamList } from '../../navigation/types';
+import type { AuthStackParamList, PendingSession } from '../../navigation/types';
 
 type Props = StackScreenProps<AuthStackParamList, 'Login'>;
 
-const DIAL_CODE = '+91';
-const NUMBER_LENGTH = 10;
-const OTP_LENGTH = 6;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Identifier + password sign-in, shared by both roles.
+ *
+ * The identifier accepts a mobile number or an email address and the backend
+ * resolves which account it belongs to, so admins and shop owners use one form
+ * and the screen never has to guess the role. The PRD's OTP flow (FR-1) is
+ * still reachable from the link at the foot of the screen.
+ */
 export default function LoginScreen({ navigation }: Props) {
-  const [nationalNumber, setNationalNumber] = React.useState('');
-  const [error, setError] = React.useState<string | undefined>();
+  const [identifier, setIdentifier] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [fieldError, setFieldError] = React.useState<string | undefined>();
+  const [formError, setFormError] = React.useState<string | undefined>();
   const [submitting, setSubmitting] = React.useState(false);
 
-  const isValid = nationalNumber.length === NUMBER_LENGTH;
+  const trimmed = identifier.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  // Ten digits, or something that at least looks like an address.
+  const identifierValid = digits.length >= 10 || emailPattern.test(trimmed);
+  const canSubmit = identifierValid && password.length > 0;
 
-  const handleContinue = React.useCallback(async () => {
-    if (!isValid) {
-      setError(`Enter a valid ${NUMBER_LENGTH}-digit mobile number.`);
+  const handleLogin = React.useCallback(async () => {
+    if (!identifierValid) {
+      setFieldError('Enter a 10-digit mobile number or an email address.');
+      return;
+    }
+    if (!password) {
+      setFormError('Enter your password to continue.');
       return;
     }
 
-    setError(undefined);
+    setFieldError(undefined);
+    setFormError(undefined);
     setSubmitting(true);
 
     try {
-      const { resendAfterSeconds } = await requestOtp(`${DIAL_CODE}${nationalNumber}`);
-      navigation.navigate('Verification', {
-        dialCode: DIAL_CODE,
-        nationalNumber,
-        resendAfterSeconds,
+      const result = await loginWithPassword(trimmed, password);
+
+      if (result.status === 'invalid_credentials') {
+        // Deliberately vague: naming which half was wrong tells an attacker
+        // which accounts exist.
+        setFormError('Those credentials do not match an account.');
+        setPassword('');
+        return;
+      }
+
+      const session: PendingSession = {
+        userId: result.userId,
+        token: result.token,
+        role: result.role,
+        phone: result.phone,
+        fullName: result.fullName,
+        email: result.email,
+        assignedShop: result.assignedShop,
+      };
+
+      // An account that has not finished onboarding still owes us a profile.
+      navigation.navigate(result.profileComplete ? 'Biometric' : 'Profile', {
+        session,
       });
     } catch {
-      setError('Could not send the code. Check your connection and try again.');
+      setFormError('Could not sign you in. Check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
-  }, [isValid, nationalNumber, navigation]);
+  }, [identifierValid, navigation, password, trimmed]);
 
   return (
     <Screen
@@ -55,12 +92,20 @@ export default function LoginScreen({ navigation }: Props) {
       footer={
         <View>
           <AppButton
-            label="Continue"
-            onPress={handleContinue}
-            disabled={!isValid}
+            label="Sign in"
+            onPress={handleLogin}
+            disabled={!canSubmit}
             loading={submitting}
-            testID="login-continue"
+            testID="login-submit"
           />
+
+          <AppButton
+            label="Sign in with OTP instead"
+            onPress={() => navigation.navigate('OtpLogin')}
+            variant="link"
+            style={styles.alternate}
+          />
+
           <AppText variant="caption" align="center" style={styles.legal}>
             By continuing, you agree to our Terms of Service and Privacy Policy.
           </AppText>
@@ -71,30 +116,49 @@ export default function LoginScreen({ navigation }: Props) {
         <BrandMark caption="Secure Portal" style={styles.brand} />
 
         <AppText variant="h2" style={styles.title}>
-          Enter your mobile number
+          Sign in to your account
         </AppText>
 
         <AppText variant="bodySecondary" style={styles.subtitle}>
-          We&apos;ll send a {OTP_LENGTH}-digit OTP to verify your franchise
-          credentials.
+          Use the mobile number or email registered with the franchise.
         </AppText>
 
-        <PhoneNumberInput
-          value={nationalNumber}
-          onChangeValue={next => {
-            setNationalNumber(next);
-            if (error) {
-              setError(undefined);
+        <LabeledInput
+          label="Mobile number or email"
+          value={identifier}
+          onChangeText={next => {
+            setIdentifier(next);
+            if (fieldError) {
+              setFieldError(undefined);
             }
           }}
-          dialCode={DIAL_CODE}
-          maxLength={NUMBER_LENGTH}
-          error={error}
+          error={fieldError}
+          placeholder="9876543210 or you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
           autoFocus
-          onSubmit={handleContinue}
-          submitDisabled={!isValid || submitting}
+          containerStyle={styles.field}
+        />
+
+        <PasswordInput
+          value={password}
+          onChangeText={next => {
+            setPassword(next);
+            if (formError) {
+              setFormError(undefined);
+            }
+          }}
+          onSubmit={handleLogin}
+          testID="login-password"
           style={styles.field}
         />
+
+        {formError ? (
+          <InlineMessage tone="error" style={styles.formError}>
+            {formError}
+          </InlineMessage>
+        ) : null}
       </View>
     </Screen>
   );
@@ -106,5 +170,7 @@ const styles = StyleSheet.create({
   title: { marginBottom: spacing.sm },
   subtitle: { marginBottom: spacing.xxl },
   field: { marginBottom: spacing.lg },
+  formError: { marginTop: spacing.xs },
+  alternate: { alignSelf: 'center', marginTop: spacing.md },
   legal: { marginTop: spacing.md, color: colors.textMuted },
 });

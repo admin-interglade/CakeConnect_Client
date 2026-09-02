@@ -65,6 +65,8 @@ export default function VerificationScreen({ navigation, route }: Props) {
           token: result.token,
           role: result.role,
           phone: displayPhone,
+          fullName: result.fullName,
+          email: result.email,
           assignedShop: result.assignedShop,
         };
 
