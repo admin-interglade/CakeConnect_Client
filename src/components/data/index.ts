@@ -3,3 +3,7 @@ export { default as DataTable, type DataTableColumn } from './DataTable';
 export { default as Pagination } from './Pagination';
 export { default as FilterBar } from './FilterBar';
 export { default as CardCarousel } from './CardCarousel';
+export {
+  default as SegmentedTabs,
+  type SegmentedTab,
+} from './SegmentedTabs';

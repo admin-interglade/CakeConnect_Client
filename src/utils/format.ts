@@ -73,6 +73,12 @@ export function formatShortDate(value: Date | string): string {
   return `${DAYS[ist.getUTCDay()]}, ${pad(ist.getUTCDate())} ${MONTHS[ist.getUTCMonth()]}`;
 }
 
+/** "Sep 2026" — the heading a grouped ledger or order list is split by. */
+export function formatMonthYear(value: Date | string): string {
+  const ist = toIst(value);
+  return `${MONTHS[ist.getUTCMonth()]} ${ist.getUTCFullYear()}`;
+}
+
 /** "22:00" in 24-hour IST, matching how the PRD states the cut-off. */
 export function formatTime(value: Date | string): string {
   const ist = toIst(value);
