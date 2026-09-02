@@ -3,7 +3,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Icon from './Icon';
 
 import AppText from './AppText';
-import { colors, iconSize, spacing } from '../constants';
+import { colors, iconSize, spacing } from '../../constants';
 
 export type InlineMessageTone = 'info' | 'error' | 'success' | 'warning';
 

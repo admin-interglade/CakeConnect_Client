@@ -2,7 +2,7 @@ import React from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { colors, iconSize } from '../constants';
+import { colors, iconSize } from '../../constants';
 
 export type IconProps = {
   /** A MaterialCommunityIcons glyph name, e.g. "fingerprint". */

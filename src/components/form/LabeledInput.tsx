@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import AppText from './AppText';
+import AppText from '../ui/AppText';
 import {
   borderRadius,
   borderWidth,
@@ -15,7 +15,7 @@ import {
   controlHeight,
   spacing,
   textVariants,
-} from '../constants';
+} from '../../constants';
 
 export type LabeledInputProps = TextInputProps & {
   /** Uppercase label rendered above the field. */

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, layout, spacing } from '../constants';
+import { colors, layout, spacing } from '../../constants';
 
 type ScreenProps = {
   children: React.ReactNode;
@@ -75,7 +75,7 @@ export default function Screen({
             {footer}
           </View>
         ) : (
-          <View style={[styles.spacer, { height: bottomInset }]} />
+          <View style={[styles.spacer]} />
         )}
       </KeyboardAvoidingView>
     </View>

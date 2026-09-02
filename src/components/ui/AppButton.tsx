@@ -12,7 +12,7 @@ import {
   iconSize,
   layout,
   spacing,
-} from '../constants';
+} from '../../constants';
 
 export type AppButtonVariant = 'primary' | 'outline' | 'link';
 
