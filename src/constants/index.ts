@@ -18,3 +18,4 @@ export {
   imageSize,
   elevation,
 } from './layout';
+export { strings } from './strings';
