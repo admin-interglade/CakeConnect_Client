@@ -19,9 +19,9 @@ const DEV_API_PORT = 4001;
  *
  * Find it with `ipconfig` (Windows) or `ipconfig getifaddr en0` (macOS). The
  * device and the machine must be on the same network, and the backend must bind
- * 0.0.0.0 rather than 127.0.0.1 — check with `netstat -ano | grep :4000`.
+ * 0.0.0.0 rather than 127.0.0.1 — check with `netstat -ano | grep :4001`.
  */
-const DEV_HOST_OVERRIDE: string | null = null;
+const DEV_HOST_OVERRIDE: string | null = '192.168.1.42';
 
 /**
  * `localhost` means something different on each target:
