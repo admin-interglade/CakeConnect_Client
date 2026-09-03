@@ -35,7 +35,12 @@ import {
   spacing,
   strings,
 } from '../../../constants';
-import { usePriceLists, useShopDetails, useShopMutations } from '../../../hooks';
+import {
+  usePermissions,
+  usePriceLists,
+  useShopDetails,
+  useShopMutations,
+} from '../../../hooks';
 import { defaultRange } from '../../../utils/dateRange';
 import {
   creditUtilisation,
@@ -98,6 +103,11 @@ export default function ShopDetails() {
 
   const priceLists = usePriceLists();
   const { create, update, changeStatus, addAdjustment } = useShopMutations();
+
+  // PRD §3 — support staff work the order queue without financial controls.
+  // The backend restricts these endpoints to ADMIN, so an ungated button could
+  // only ever produce a 403 the user cannot act on.
+  const { canManageFinancials } = usePermissions();
 
   // Arriving with mode "edit" opens the form, but only once the shop has
   // loaded — opening earlier would seed every field from an undefined shop.
@@ -492,17 +502,21 @@ export default function ShopDetails() {
               />
             </SectionCard>
 
-            <AppButton
-              label={strings.shopDetails.adjustCreditLimit}
-              onPress={() => setCreditOpen(true)}
-              style={styles.primaryAction}
-            />
-            <AppButton
-              label={strings.shopDetails.adjustment}
-              variant="outline"
-              onPress={() => setAdjustmentOpen(true)}
-              style={styles.primaryAction}
-            />
+            {canManageFinancials ? (
+              <>
+                <AppButton
+                  label={strings.shopDetails.adjustCreditLimit}
+                  onPress={() => setCreditOpen(true)}
+                  style={styles.primaryAction}
+                />
+                <AppButton
+                  label={strings.shopDetails.adjustment}
+                  variant="outline"
+                  onPress={() => setAdjustmentOpen(true)}
+                  style={styles.primaryAction}
+                />
+              </>
+            ) : null}
 
             {/* PRD §3 — every administrative action, with actor and before/after. */}
             {/* <SectionCard
@@ -572,9 +586,9 @@ export default function ShopDetails() {
         {tab === 'ledger' ? (
           <SectionCard
             title={strings.shopDetails.sectionLedger}
-            actionLabel={strings.common.add}
-            actionIcon="plus"
-            onAction={() => setAdjustmentOpen(true)}
+            actionLabel={canManageFinancials ? strings.common.add : undefined}
+            actionIcon={canManageFinancials ? 'plus' : undefined}
+            onAction={canManageFinancials ? () => setAdjustmentOpen(true) : undefined}
           >
             <DateRangePicker value={range} onChange={setRange} style={styles.rangePicker} />
 

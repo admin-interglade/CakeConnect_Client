@@ -22,8 +22,13 @@ export default function RootNavigator() {
    * PRD §3 — role decides which shell mounts, and only one is ever in the tree.
    * A shop owner therefore has no admin route to reach, by navigation or by
    * deep link, rather than being merely hidden from the admin tabs.
+   *
+   * Support staff process orders on the admin side, so they mount the same
+   * shell. Their financial controls are withheld inside it by
+   * `usePermissions().canManageFinancials` — the backend restricts those
+   * endpoints to ADMIN, so an ungated button would only produce a 403.
    */
-  const isAdmin = role === 'admin';
+  const usesAdminShell = role === 'admin' || role === 'supportStaff';
 
   return (
     <NavigationContainer theme={navigationTheme}>
@@ -31,7 +36,7 @@ export default function RootNavigator() {
         {isAuthenticated ? (
           <Stack.Screen
             name="App"
-            component={isAdmin ? AdminNavigator : AppNavigator}
+            component={usesAdminShell ? AdminNavigator : AppNavigator}
           />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />

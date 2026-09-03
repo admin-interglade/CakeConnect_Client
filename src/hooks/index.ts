@@ -1,4 +1,5 @@
 export { default as useCountdown } from './useCountdown';
+export { default as usePermissions, type Permissions } from './usePermissions';
 export { queryKeys } from './queryKeys';
 export { default as useAdminDashboard } from './useAdminDashboard';
 export { default as useShops, defaultShopFilters, defaultPagination } from './useShops';
