@@ -11,10 +11,11 @@ import {
   PasswordInput,
   Screen,
 } from '../../components';
-import { loginWithPassword } from '../../services/authApi';
-import { describeApiError } from '../../services/httpClient';
+
+import { describeApiError } from '../../services/api';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList, PendingSession } from '../../navigation/types';
+import { loginWithPassword } from '../../services/auth/auth.api';
 
 type Props = StackScreenProps<AuthStackParamList, 'Login'>;
 

@@ -12,7 +12,7 @@ import {
   Screen,
 } from '../../components';
 import { pickProfilePhoto } from '../../services/device';
-import { submitProfile } from '../../services/authApi';
+import { submitProfile } from '../../services/admin';
 import { colors, layout, spacing } from '../../constants';
 import type { AuthStackParamList } from '../../navigation/types';
 

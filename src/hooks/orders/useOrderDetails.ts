@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getOrder } from '../services/adminApi';
-import { describeApiError } from '../services/httpClient';
-import { queryKeys } from './queryKeys';
-import type { Order } from '../types/admin';
+import { getOrder } from '../../services/admin';
+import { describeApiError } from '../../services/api';
+import { queryKeys } from '../queryKeys';
+import type { Order } from '../../types/admin';
 
 type OrderDetailsResult = {
   order?: Order;

@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getProductionDetail, getProductionRequirement } from '../services/adminApi';
-import { describeApiError } from '../services/httpClient';
-import { queryKeys } from './queryKeys';
-import type { ProductionDetail, ProductionRequirement } from '../types/admin';
+import { getProductionDetail, getProductionRequirement } from '../../services/admin';
+import { describeApiError } from '../../services/api';
+import { queryKeys } from '../queryKeys';
+import type { ProductionDetail, ProductionRequirement } from '../../types/admin';
 
 type ProductionResult = {
   requirement?: ProductionRequirement;

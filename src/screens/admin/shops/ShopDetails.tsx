@@ -20,6 +20,7 @@ import {
   ProgressBar,
   Screen,
   ScreenHeader,
+  InfoCard,
   SectionCard,
   SegmentedTabs,
   StatusBadge,
@@ -46,6 +47,7 @@ import {
   creditUtilisation,
   formatCurrency,
   formatCurrencyCompact,
+  formatDate,
   formatDateTime,
   formatMonthYear,
   formatNumber,
@@ -92,6 +94,7 @@ export default function ShopDetails() {
     shop,
     ledger,
     orders,
+    payments,
    // audit,
     summary,
     isLoading,
@@ -313,9 +316,13 @@ export default function ShopDetails() {
       ? strings.shopDetails.creditWatch
       : strings.shopDetails.creditHealthy;
 
-  const payments = ledger.filter(
-    entry => entry.type === 'payment' || entry.type === 'credit_note',
-  );
+  /**
+   * FR-39 — payment history comes from GET /payments, not from the ledger.
+   * A payment can sit in PENDING_CONFIRMATION (FR-30) and never reach the
+   * ledger at all, so deriving this from ledger rows would hide exactly the
+   * payments the admin needs to act on.
+   */
+  const settledPayments = payments.filter(payment => payment.status === 'SUCCESS');
 
   const tabs: SegmentedTab<DetailTab>[] = [
     { key: 'overview', label: strings.shopDetails.tabs.overview },
@@ -327,7 +334,7 @@ export default function ShopDetails() {
   const billed = ledger
     .filter(entry => entry.amount > 0)
     .reduce((total, entry) => total + entry.amount, 0);
-  const received = payments.reduce((total, entry) => total + Math.abs(entry.amount), 0);
+  const received = settledPayments.reduce((total, payment) => total + payment.amount, 0);
   // The ledger arrives newest first, so the first row carries the closing balance.
   const closingBalance = ledger[0]?.runningBalance ?? shop.outstanding;
 
@@ -646,8 +653,18 @@ export default function ShopDetails() {
             </View>
 
             {payments.length > 0 ? (
-              payments.map(entry => (
-                <LedgerEntryCard key={entry.id} entry={entry} showBalance={false} />
+              payments.map(payment => (
+                <InfoCard
+                  key={payment.id}
+                  style={styles.paymentCard}
+                  title={formatCurrency(payment.amount)}
+                  subtitle={`${payment.method}${
+                    payment.status === 'SUCCESS' ? '' : ` · ${payment.status}`
+                  }`}
+                  caption={[formatDate(payment.date), payment.reference]
+                    .filter(Boolean)
+                    .join(' · ')}
+                />
               ))
             ) : (
               <EmptyState icon="cash-remove" title={strings.shopDetails.noPayments} />
@@ -972,4 +989,5 @@ const styles = StyleSheet.create({
   },
   auditBody: { flex: 1 },
   empty: { paddingVertical: spacing.lg },
+  paymentCard: { marginBottom: spacing.sm },
 });

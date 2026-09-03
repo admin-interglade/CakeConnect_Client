@@ -23,6 +23,7 @@ import {
   ErrorState,
   FilterSheet,
   Icon,
+  InlineMessage,
   OfflineBanner,
   OrderQueueCard,
   Pagination,
@@ -144,6 +145,7 @@ export default function OrdersList() {
     total,
     counts,
     shops,
+    dateFilterApplied,
     isLoading,
     isError,
     error,
@@ -368,6 +370,18 @@ export default function OrdersList() {
       >
         <OfflineBanner visible={isStale} />
 
+        {/*
+          GET /orders filters on one exact deliveryDate and has no from/to, so a
+          multi-day range cannot reach the server. Saying so is the honest
+          option: silently returning unfiltered rows under an active date filter
+          would misreport the queue. See docs/api-gaps.md G7.
+        */}
+        {!dateFilterApplied ? (
+          <InlineMessage tone="info" icon="information-outline" style={styles.notice}>
+            {strings.orders.dateFilterUnsupported}
+          </InlineMessage>
+        ) : null}
+
         {selectionMode ? (
           <SectionCard title={strings.common.selectedCount(selected.length)}>
             <View style={styles.bulkActions}>
@@ -587,6 +601,7 @@ function tabCount(
 }
 
 const styles = StyleSheet.create({
+  notice: { marginTop: spacing.sm },
   list: { flex: 1 },
   content: { paddingBottom: spacing.xxl },
   filterBar: {

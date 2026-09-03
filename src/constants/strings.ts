@@ -68,11 +68,19 @@ export const strings = {
       empty: 'No orders submitted for tomorrow yet.',
       viewFullPlan: 'View full production plan',
       moreItems: (count: number) => `+${count} more items`,
+      notGenerated:
+        "Tomorrow's production plan has not been generated yet. It is created from submitted orders once the cut-off passes.",
     },
     charts: {
       trendTitle: 'Order value trend',
       topProductsTitle: 'Top products by quantity',
       empty: 'No data for this range.',
+      /**
+       * Distinct from `empty`: "no data" and "we cannot ask for this data" look
+       * identical on a blank chart but mean opposite things to whoever reads it.
+       */
+      unavailable:
+        'Daily order-value trend is not available from the server yet.',
     },
     recentOrders: 'Recent orders',
     quickActions: 'Quick actions',
@@ -230,6 +238,12 @@ export const strings = {
     deliveryDate: 'Delivery date',
     pendingCutoff: 'Pending cut-off',
     empty: 'No orders match these filters.',
+    /**
+     * The list is genuinely unfiltered by date here, so saying so beats
+     * showing rows that look filtered and are not.
+     */
+    dateFilterUnsupported:
+      'Showing all dates. Filtering orders by a date range is not supported by the server yet.',
     emptyPendingCutoff: 'Every shop has submitted for this cut-off.',
     bulkAccept: 'Accept selected',
     bulkProduction: 'Move to production',

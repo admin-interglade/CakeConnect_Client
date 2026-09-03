@@ -31,6 +31,9 @@ type ShopCardProps = {
 };
 
 /** FR-38 row: identity, owner, today's order state, money and credit at a glance. */
+/** Shown where the backend reports no value, rather than a misleading zero. */
+const UNKNOWN = '—';
+
 function ShopCard({
   shop,
   onPress,
@@ -71,15 +74,30 @@ function ShopCard({
 
       <View style={styles.metrics}>
         <Metric label={strings.shops.outstanding} value={formatCurrencyCompact(shop.outstanding)} />
-        <Metric label={strings.shops.paidToDate} value={formatCurrencyCompact(shop.paidToDate)} />
+        {/*
+          An em dash where the backend does not report the figure. Showing a
+          formatted zero would read as "this shop has never paid", which is a
+          different claim from "not known here". See docs/api-gaps.md G3/G4.
+        */}
+        <Metric
+          label={strings.shops.paidToDate}
+          value={
+            shop.paidToDate === undefined
+              ? UNKNOWN
+              : formatCurrencyCompact(shop.paidToDate)
+          }
+        />
         <Metric
           label={strings.shops.todaysOrder}
           value={
-            shop.todaysOrderStatus === 'no_order'
+            shop.todaysOrderStatus === undefined
+              ? UNKNOWN
+              : shop.todaysOrderStatus === 'no_order'
               ? strings.shops.noOrderToday
               : undefined
           }
           badge={
+            shop.todaysOrderStatus === undefined ||
             shop.todaysOrderStatus === 'no_order' ? undefined : (
               <StatusBadge status={shop.todaysOrderStatus} compact />
             )

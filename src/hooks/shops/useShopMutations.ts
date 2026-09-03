@@ -5,12 +5,12 @@ import {
   createShop,
   setShopStatus,
   updateShop,
-} from '../services/adminApi';
-import { describeApiError } from '../services/httpClient';
-import { queryKeys } from './queryKeys';
-import { useToast } from '../components/feedback';
-import { strings } from '../constants';
-import type { ShopInput, ShopStatus } from '../types/admin';
+} from '../../services/admin';
+import { describeApiError } from '../../services/api';
+import { queryKeys } from '../queryKeys';
+import { useToast } from '../../components/feedback';
+import { strings } from '../../constants';
+import type { ShopInput, ShopStatus } from '../../types/admin';
 
 /**
  * FR-2, FR-3 and FR-39 writes.

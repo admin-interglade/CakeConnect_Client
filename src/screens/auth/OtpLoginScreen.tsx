@@ -9,8 +9,8 @@ import {
   PhoneNumberInput,
   Screen,
 } from '../../components';
-import { requestOtp } from '../../services/authApi';
-import { describeApiError } from '../../services/httpClient';
+import { requestOtp } from '../../services/admin';
+import { describeApiError } from '../../services/api';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList } from '../../navigation/types';
 
