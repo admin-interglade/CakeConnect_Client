@@ -1,10 +1,21 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import { getOrders, getShops, getShopsPendingCutoff } from '../services/adminApi';
+import {
+  getOrderStatusCounts,
+  getOrders,
+  getShops,
+  getShopsPendingCutoff,
+} from '../services/adminApi';
 import { describeApiError } from '../services/httpClient';
 import { queryKeys } from './queryKeys';
 import { defaultRange } from '../utils/dateRange';
-import type { Order, OrderFilters, Pagination, Shop } from '../types/admin';
+import type {
+  Order,
+  OrderFilters,
+  OrderStatusCounts,
+  Pagination,
+  Shop,
+} from '../types/admin';
 
 export const defaultOrderFilters = (): OrderFilters => ({
   search: '',
@@ -19,6 +30,8 @@ export const defaultOrderPagination: Pagination = { page: 1, limit: 15 };
 type OrdersResult = {
   orders: Order[];
   total: number;
+  /** How many orders sit in each queue tab under the current filters. */
+  counts: OrderStatusCounts;
   /** Every shop, for the FR-40 shop selector. */
   shops: Shop[];
   isLoading: boolean;
@@ -52,6 +65,14 @@ export function useOrders(filters: OrderFilters, pagination: Pagination): Orders
     enabled: isPendingView,
   });
 
+  // Counts ignore the status filter, so the tabs keep their badges while one
+  // of them is selected; they share the rest of the filters with the list.
+  const counts = useQuery({
+    queryKey: queryKeys.orders.counts(filters),
+    queryFn: () => getOrderStatusCounts(filters),
+    placeholderData: keepPreviousData,
+  });
+
   const shops = useQuery({
     queryKey: queryKeys.shops.list(
       { search: '', status: 'all', region: 'all', sort: 'name' },
@@ -71,6 +92,7 @@ export function useOrders(filters: OrderFilters, pagination: Pagination): Orders
   return {
     orders,
     total: isPendingView ? pending.data?.length ?? 0 : list.data?.total ?? 0,
+    counts: counts.data ?? { all: 0 },
     shops: shops.data?.items ?? [],
     isLoading: active.isLoading,
     isError: active.isError && active.data === undefined,

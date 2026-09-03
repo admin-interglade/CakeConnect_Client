@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   bulkUpdateOrderStatus,
+  captureShortSupply,
   exportOrders,
   exportProductionRequirement,
   reopenOrder,
@@ -16,6 +17,7 @@ import type {
   Order,
   OrderFilters,
   OrderStatus,
+  ShortSupplyLine,
 } from '../types/admin';
 
 /**
@@ -90,6 +92,24 @@ export function useOrderMutations() {
       }),
   });
 
+  /**
+   * FR-40 — the shortfall declared ahead of delivery. It only rewrites the
+   * quantities, so the detail screen is refetched rather than patched: the
+   * server decides which lines end up flagged short.
+   */
+  const shortSupply = useMutation({
+    mutationFn: ({ orderId, lines }: { orderId: string; lines: ShortSupplyLine[] }) =>
+      captureShortSupply(orderId, lines),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.orders.detail(variables.orderId),
+      });
+      invalidateOrders();
+      toast.show(strings.shortSupply.recorded, { tone: 'success' });
+    },
+    onError: error => toast.show(describeApiError(error), { tone: 'error' }),
+  });
+
   /** FR-18 — always carries a reason, which the API writes to the audit trail. */
   const reopen = useMutation({
     mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
@@ -126,7 +146,14 @@ export function useOrderMutations() {
     onError: error => toast.show(describeApiError(error), { tone: 'error' }),
   });
 
-  return { updateStatus, bulkUpdateStatus, reopen, exportList, exportProduction };
+  return {
+    updateStatus,
+    bulkUpdateStatus,
+    shortSupply,
+    reopen,
+    exportList,
+    exportProduction,
+  };
 }
 
 export default useOrderMutations;
