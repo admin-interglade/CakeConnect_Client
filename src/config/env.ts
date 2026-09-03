@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
  * repeated at every call site.
  */
 
-const DEV_API_PORT = 4000;
+const DEV_API_PORT = 4001;
 
 /**
  * Where the dev backend lives, as seen *from the device*. Set this to your
