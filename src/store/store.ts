@@ -15,10 +15,25 @@ import authReducer from './authSlice';
 import ordersReducer from './ordersSlice';
 import { authListener } from './authListener';
 
+/**
+ * Disables redux-persist's 5s rehydrate timeout.
+ *
+ * When storage answers after the timeout, PersistGate has already released the
+ * app with default state and the late REHYDRATE still lands — merging the
+ * stored keys over whatever the user has done since. Signing in inside that
+ * window means `setCredentials` is overwritten by the logged-out state that was
+ * on disk, and the user is bounced straight back to the login screen.
+ *
+ * 0 means "wait for storage" rather than "give up at 5s". A debug build on a
+ * physical device is exactly where the read is slow enough to matter.
+ */
+const PERSIST_TIMEOUT_DISABLED = 0;
+
 // `whitelist` names keys *inside* the auth slice, not the slice itself.
 const persistConfig = {
   key: 'auth',
   storage: AsyncStorage,
+  timeout: PERSIST_TIMEOUT_DISABLED,
   whitelist: [
     'isAuthenticated',
     'user',
@@ -36,7 +51,12 @@ const persistConfig = {
 
 const persistedAuthReducer = persistReducer(persistConfig, authReducer);
 const persistedOrdersReducer = persistReducer(
-  { key: 'orders', storage: AsyncStorage, whitelist: ['cart', 'pendingSync'] },
+  {
+    key: 'orders',
+    storage: AsyncStorage,
+    timeout: PERSIST_TIMEOUT_DISABLED,
+    whitelist: ['cart', 'pendingSync'],
+  },
   ordersReducer,
 );
 
