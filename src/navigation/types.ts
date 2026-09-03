@@ -110,11 +110,15 @@ export type AdminShopsStackParamList = {
   ShopDetails: { shopId?: string; mode?: 'view' | 'edit' | 'create' };
   /** Reached from a shop's order history. */
   OrderDetails: { orderId: string };
+  /** FR-40 — pushed from an order that cannot be fulfilled in full. */
+  ShortSupply: { orderId: string };
 };
 
 export type AdminOrdersStackParamList = {
   /** Pre-filtered when a dashboard tile deep-links into the queue. */
   OrdersList: { status?: OrderStatus | 'pending_cutoff'; shopId?: string } | undefined;
   OrderDetails: { orderId: string };
+  /** FR-40 — pushed from an order that cannot be fulfilled in full. */
+  ShortSupply: { orderId: string };
   ShopDetails: { shopId?: string; mode?: 'view' | 'edit' | 'create' };
 };
