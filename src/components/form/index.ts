@@ -6,6 +6,7 @@ export { default as OtpInput } from './OtpInput';
 export { default as SearchInput } from './SearchInput';
 export { default as Dropdown, type DropdownOption } from './Dropdown';
 export { default as DateRangePicker } from './DateRangePicker';
+export { default as QuantityStepper } from './QuantityStepper';
 export {
   default as ModalForm,
   type FormField,
