@@ -25,6 +25,7 @@ export const strings = {
     search: 'Search',
     filters: 'Filters',
     clearFilters: 'Clear filters',
+    apply: 'Apply',
     all: 'All',
     loading: 'Loading...',
     somethingWentWrong: 'Something went wrong. Please try again.',
@@ -208,8 +209,20 @@ export const strings = {
   },
 
   orders: {
-    title: 'All orders',
-    searchPlaceholder: 'Search by order ID',
+    title: 'Orders',
+    subtitle: 'Franchise order management',
+    searchPlaceholder: 'Search by shop, order ID or item...',
+    selectRange: 'Select range',
+    filtersTitle: 'Filter orders',
+    dateRangeLabel: 'Date range',
+    filterSummary: (count: number) =>
+      `${count} ${count === 1 ? 'filter' : 'filters'} applied`,
+    itemsAndValue: 'Items & value',
+    itemsAndValueCount: (items: number, value: string) =>
+      `${items} ${items === 1 ? 'item' : 'items'} · ${value}`,
+    statusAgo: (status: string, ago: string) => `${status} ${ago}`,
+    quickAccept: 'Accept order',
+    selectionHint: 'Long-press an order to select several at once.',
     statusLabel: 'Status',
     shopLabel: 'Shop',
     dateFieldLabel: 'Date',
@@ -231,6 +244,15 @@ export const strings = {
   },
 
   orderDetails: {
+    title: 'Order detail',
+    subtitle: (shop: string, orderId: string) => `${shop} · ${orderId}`,
+    progress: 'Order progress',
+    itemsCount: (count: number) => `Order items (${count})`,
+    itemNote: (note: string) => `Note: ${note}`,
+    deliveringNote: (quantity: string) => `Delivering ${quantity}`,
+    sectionShop: 'Shop',
+    captureShortSupply: 'Capture short supply',
+    startProduction: 'Start production',
     items: 'Items',
     ordered: 'Ordered',
     delivered: 'Delivered',
@@ -256,7 +278,6 @@ export const strings = {
     reopenDone: 'Order reopened. The shop has been notified.',
     accept: 'Accept order',
     reject: 'Reject order',
-    moveToProduction: 'Move to production',
     markDispatched: 'Mark dispatched',
     markDelivered: 'Mark delivered',
     generateInvoice: 'Generate invoice',
@@ -274,6 +295,37 @@ export const strings = {
     cancelTitle: 'Cancel this order?',
     cancelMessage:
       'The shop will be notified that the order was cancelled. This cannot be undone.',
+  },
+
+  shortSupply: {
+    title: 'Short supply',
+    subtitle: (orderId: string, shop: string) => `${orderId} · ${shop}`,
+    intro:
+      'Indicate quantities that cannot be fully fulfilled for tomorrow’s run. Shops will be automatically notified.',
+    ordered: 'Ordered',
+    delivering: 'Delivering',
+    shortfall: 'Shortfall',
+    reasonLabel: 'Reason for shortage',
+    reasonPlaceholder: 'Select a reason',
+    reasonRequired: 'Choose a reason for every short line.',
+    reasons: {
+      stock: 'Stock shortage',
+      ingredient: 'Ingredient unavailable',
+      production: 'Production delay',
+      quality: 'Quality rejection',
+      capacity: 'Kitchen capacity',
+      other: 'Other',
+    },
+    summaryNone: 'Every line is being delivered in full.',
+    summaryShort: (lines: number) =>
+      `${lines} ${lines === 1 ? 'line' : 'lines'} short of the ordered quantity.`,
+    confirm: 'Confirm short supply',
+    confirmTitle: 'Confirm short supply?',
+    confirmMessage: (lines: number, shop: string) =>
+      `${lines} ${lines === 1 ? 'line' : 'lines'} will be sent short and ${shop} will be notified. The change is recorded in the audit trail.`,
+    recorded: 'Short supply recorded. The shop has been notified.',
+    decrease: 'Decrease quantity',
+    increase: 'Increase quantity',
   },
 
   productionPlan: {
