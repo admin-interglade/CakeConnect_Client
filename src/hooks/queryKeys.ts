@@ -40,6 +40,7 @@ export const queryKeys = {
     ledger: (shopId: string, range: DateRange) =>
       ['shops', 'ledger', shopId, range.from, range.to] as const,
     audit: (shopId: string) => ['shops', 'audit', shopId] as const,
+    payments: (shopId: string) => ['shops', 'payments', shopId] as const,
     ageing: ['shops', 'ageing'] as const,
     priceLists: ['shops', 'priceLists'] as const,
     regions: ['shops', 'regions'] as const,

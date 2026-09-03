@@ -7,18 +7,20 @@ import {
   getShop,
   getShopAudit,
   getShopLedger,
-} from '../services/adminApi';
-import { describeApiError } from '../services/httpClient';
-import { queryKeys } from './queryKeys';
-import { defaultRange, resolveRange } from '../utils/dateRange';
+  getShopPayments,
+} from '../../services/admin';
+import { describeApiError } from '../../services/api';
+import { queryKeys } from '../queryKeys';
+import { defaultRange, resolveRange } from '../../utils/dateRange';
 import type {
   AuditEntry,
   DateRange,
   LedgerEntry,
   Order,
+  Payment,
   PriceList,
   Shop,
-} from '../types/admin';
+} from '../../types/admin';
 
 /** FR-39 — the three figures the profile's monthly summary block reports. */
 export type ShopMonthlySummary = {
@@ -31,6 +33,8 @@ type ShopDetailsResult = {
   shop?: Shop;
   ledger: LedgerEntry[];
   orders: Order[];
+  /** FR-39 — payment history, separate from the ledger's payment rows. */
+  payments: Payment[];
   audit: AuditEntry[];
   summary: ShopMonthlySummary;
   isLoading: boolean;
@@ -68,10 +72,15 @@ export function useShopDetails(
         queryFn: () => getShopAudit(id),
         enabled,
       },
+      {
+        queryKey: queryKeys.shops.payments(id),
+        queryFn: () => getShopPayments(id),
+        enabled,
+      },
     ],
   });
 
-  const [shop, ledger, audit] = results;
+  const [shop, ledger, audit, payments] = results;
 
   // The summary block always reports the calendar month, whatever range the
   // ledger and order tabs are showing, so it is resolved independently.
@@ -138,6 +147,7 @@ export function useShopDetails(
     shop: shop.data as Shop | undefined,
     ledger: (ledger.data as LedgerEntry[] | undefined) ?? [],
     orders: orders.data?.items ?? [],
+    payments: (payments.data as Payment[] | undefined) ?? [],
     audit: (audit.data as AuditEntry[] | undefined) ?? [],
     summary,
     isLoading: enabled && shop.isLoading,

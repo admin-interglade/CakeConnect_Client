@@ -5,17 +5,18 @@ import {
   getOrders,
   getShops,
   getShopsPendingCutoff,
-} from '../services/adminApi';
-import { describeApiError } from '../services/httpClient';
-import { queryKeys } from './queryKeys';
-import { defaultRange } from '../utils/dateRange';
+  isOrderDateFilterSupported,
+} from '../../services/admin';
+import { describeApiError } from '../../services/api';
+import { queryKeys } from '../queryKeys';
+import { defaultRange } from '../../utils/dateRange';
 import type {
   Order,
   OrderFilters,
   OrderStatusCounts,
   Pagination,
   Shop,
-} from '../types/admin';
+} from '../../types/admin';
 
 export const defaultOrderFilters = (): OrderFilters => ({
   search: '',
@@ -34,6 +35,13 @@ type OrdersResult = {
   counts: OrderStatusCounts;
   /** Every shop, for the FR-40 shop selector. */
   shops: Shop[];
+  /**
+   * False when the chosen range cannot be pushed to the server: GET /orders
+   * filters on one exact deliveryDate and has no from/to, so a multi-day range
+   * returns unfiltered rows. The screen says so rather than presenting them as
+   * filtered (docs/api-gaps.md G7).
+   */
+  dateFilterApplied: boolean;
   isLoading: boolean;
   isError: boolean;
   error?: string;
@@ -94,6 +102,7 @@ export function useOrders(filters: OrderFilters, pagination: Pagination): Orders
     total: isPendingView ? pending.data?.length ?? 0 : list.data?.total ?? 0,
     counts: counts.data ?? { all: 0 },
     shops: shops.data?.items ?? [],
+    dateFilterApplied: isOrderDateFilterSupported(filters),
     isLoading: active.isLoading,
     isError: active.isError && active.data === undefined,
     error: active.error ? describeApiError(active.error) : undefined,

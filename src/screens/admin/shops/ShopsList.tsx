@@ -59,8 +59,20 @@ export default function ShopsList() {
   const [showAgeing, setShowAgeing] = React.useState(false);
   const [pending, setPending] = React.useState<PendingAction | null>(null);
 
-  const { shops, total, ageing, regions, isLoading, isError, error, isStale, isRefetching, refetch } =
-    useShops(filters, pagination);
+  const {
+    shops,
+    total,
+    ageing,
+    regions,
+    ageingAvailable,
+    regionsAvailable,
+    isLoading,
+    isError,
+    error,
+    isStale,
+    isRefetching,
+    refetch,
+  } = useShops(filters, pagination);
 
   const { changeStatus } = useShopMutations();
 
@@ -141,12 +153,19 @@ export default function ShopsList() {
             options={statusOptions}
             onChange={status => updateFilters({ status })}
           />
-          <Dropdown
-            label={strings.shops.regionLabel}
-            value={filters.region}
-            options={regionOptions}
-            onChange={region => updateFilters({ region })}
-          />
+          {/*
+            Hidden entirely when the backend cannot enumerate regions: an empty
+            dropdown reads as "this network has no regions" rather than "this
+            filter is not available" (docs/api-gaps.md G6).
+          */}
+          {regionsAvailable ? (
+            <Dropdown
+              label={strings.shops.regionLabel}
+              value={filters.region}
+              options={regionOptions}
+              onChange={region => updateFilters({ region })}
+            />
+          ) : null}
         </View>
 
         <Dropdown
@@ -157,7 +176,13 @@ export default function ShopsList() {
         />
       </FilterBar>
 
-      {/* FR-38 — outstanding split into the PRD's three ageing buckets. */}
+      {/*
+        FR-38 — outstanding split into the PRD's three ageing buckets. The card
+        is dropped rather than shown empty when the server has no ageing data
+        to give: a blank chart here would read as "nothing is overdue"
+        (docs/api-gaps.md G1).
+      */}
+      {ageingAvailable ? (
       <SectionCard
         title={strings.shops.ageingTitle}
         actionLabel={showAgeing ? strings.common.close : strings.shops.ageingToggle}
@@ -178,6 +203,7 @@ export default function ShopsList() {
           />
         ) : null}
       </SectionCard>
+      ) : null}
     </View>
   );
 

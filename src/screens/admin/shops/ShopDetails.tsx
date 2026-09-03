@@ -20,6 +20,7 @@ import {
   ProgressBar,
   Screen,
   ScreenHeader,
+  InfoCard,
   SectionCard,
   SegmentedTabs,
   StatusBadge,
@@ -35,12 +36,18 @@ import {
   spacing,
   strings,
 } from '../../../constants';
-import { usePriceLists, useShopDetails, useShopMutations } from '../../../hooks';
+import {
+  usePermissions,
+  usePriceLists,
+  useShopDetails,
+  useShopMutations,
+} from '../../../hooks';
 import { defaultRange } from '../../../utils/dateRange';
 import {
   creditUtilisation,
   formatCurrency,
   formatCurrencyCompact,
+  formatDate,
   formatDateTime,
   formatMonthYear,
   formatNumber,
@@ -87,6 +94,7 @@ export default function ShopDetails() {
     shop,
     ledger,
     orders,
+    payments,
    // audit,
     summary,
     isLoading,
@@ -98,6 +106,11 @@ export default function ShopDetails() {
 
   const priceLists = usePriceLists();
   const { create, update, changeStatus, addAdjustment } = useShopMutations();
+
+  // PRD §3 — support staff work the order queue without financial controls.
+  // The backend restricts these endpoints to ADMIN, so an ungated button could
+  // only ever produce a 403 the user cannot act on.
+  const { canManageFinancials } = usePermissions();
 
   // Arriving with mode "edit" opens the form, but only once the shop has
   // loaded — opening earlier would seed every field from an undefined shop.
@@ -303,9 +316,13 @@ export default function ShopDetails() {
       ? strings.shopDetails.creditWatch
       : strings.shopDetails.creditHealthy;
 
-  const payments = ledger.filter(
-    entry => entry.type === 'payment' || entry.type === 'credit_note',
-  );
+  /**
+   * FR-39 — payment history comes from GET /payments, not from the ledger.
+   * A payment can sit in PENDING_CONFIRMATION (FR-30) and never reach the
+   * ledger at all, so deriving this from ledger rows would hide exactly the
+   * payments the admin needs to act on.
+   */
+  const settledPayments = payments.filter(payment => payment.status === 'SUCCESS');
 
   const tabs: SegmentedTab<DetailTab>[] = [
     { key: 'overview', label: strings.shopDetails.tabs.overview },
@@ -317,7 +334,7 @@ export default function ShopDetails() {
   const billed = ledger
     .filter(entry => entry.amount > 0)
     .reduce((total, entry) => total + entry.amount, 0);
-  const received = payments.reduce((total, entry) => total + Math.abs(entry.amount), 0);
+  const received = settledPayments.reduce((total, payment) => total + payment.amount, 0);
   // The ledger arrives newest first, so the first row carries the closing balance.
   const closingBalance = ledger[0]?.runningBalance ?? shop.outstanding;
 
@@ -492,17 +509,21 @@ export default function ShopDetails() {
               />
             </SectionCard>
 
-            <AppButton
-              label={strings.shopDetails.adjustCreditLimit}
-              onPress={() => setCreditOpen(true)}
-              style={styles.primaryAction}
-            />
-            <AppButton
-              label={strings.shopDetails.adjustment}
-              variant="outline"
-              onPress={() => setAdjustmentOpen(true)}
-              style={styles.primaryAction}
-            />
+            {canManageFinancials ? (
+              <>
+                <AppButton
+                  label={strings.shopDetails.adjustCreditLimit}
+                  onPress={() => setCreditOpen(true)}
+                  style={styles.primaryAction}
+                />
+                <AppButton
+                  label={strings.shopDetails.adjustment}
+                  variant="outline"
+                  onPress={() => setAdjustmentOpen(true)}
+                  style={styles.primaryAction}
+                />
+              </>
+            ) : null}
 
             {/* PRD §3 — every administrative action, with actor and before/after. */}
             {/* <SectionCard
@@ -572,9 +593,9 @@ export default function ShopDetails() {
         {tab === 'ledger' ? (
           <SectionCard
             title={strings.shopDetails.sectionLedger}
-            actionLabel={strings.common.add}
-            actionIcon="plus"
-            onAction={() => setAdjustmentOpen(true)}
+            actionLabel={canManageFinancials ? strings.common.add : undefined}
+            actionIcon={canManageFinancials ? 'plus' : undefined}
+            onAction={canManageFinancials ? () => setAdjustmentOpen(true) : undefined}
           >
             <DateRangePicker value={range} onChange={setRange} style={styles.rangePicker} />
 
@@ -632,8 +653,18 @@ export default function ShopDetails() {
             </View>
 
             {payments.length > 0 ? (
-              payments.map(entry => (
-                <LedgerEntryCard key={entry.id} entry={entry} showBalance={false} />
+              payments.map(payment => (
+                <InfoCard
+                  key={payment.id}
+                  style={styles.paymentCard}
+                  title={formatCurrency(payment.amount)}
+                  subtitle={`${payment.method}${
+                    payment.status === 'SUCCESS' ? '' : ` · ${payment.status}`
+                  }`}
+                  caption={[formatDate(payment.date), payment.reference]
+                    .filter(Boolean)
+                    .join(' · ')}
+                />
               ))
             ) : (
               <EmptyState icon="cash-remove" title={strings.shopDetails.noPayments} />
@@ -958,4 +989,5 @@ const styles = StyleSheet.create({
   },
   auditBody: { flex: 1 },
   empty: { paddingVertical: spacing.lg },
+  paymentCard: { marginBottom: spacing.sm },
 });

@@ -19,8 +19,8 @@ import type {
   Shop,
   ShopStatus,
   TaxLine,
-} from '../types/admin';
-import { addDays, toApiDate } from '../utils/format';
+} from '../../types/admin';
+import { addDays, toApiDate } from '../../utils/format';
 
 /** Deterministic pseudo-random so the mock renders the same on every reload. */
 function seeded(seed: number) {

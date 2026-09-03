@@ -21,6 +21,7 @@ import {
   ScreenHeader,
   SectionCard,
   SimpleBarChart,
+  InlineMessage,
   SimpleLineChart,
   SkeletonCards,
   SkeletonList,
@@ -69,6 +70,8 @@ export default function AdminDashboard() {
     trends,
     topProducts,
     production,
+    trendsAvailable,
+    productionNeedsGenerating,
     isLoading,
     isError,
     error,
@@ -294,6 +297,12 @@ export default function AdminDashboard() {
                 style={styles.viewPlan}
               />
             </>
+          ) : productionNeedsGenerating ? (
+            /* FR-37 — the plan is generated on demand, so "not generated yet"
+               is a normal state with an action, not an error. */
+            <InlineMessage tone="info" icon="information-outline">
+              {strings.dashboard.production.notGenerated}
+            </InlineMessage>
           ) : (
             <EmptyLine message={strings.dashboard.production.empty} />
           )}
@@ -306,7 +315,7 @@ export default function AdminDashboard() {
         >
           {isLoading ? (
             <SkeletonList rows={3} />
-          ) : (
+          ) : trendsAvailable ? (
             <SimpleLineChart
               data={trends.map(point => ({
                 label: formatShortDate(point.date),
@@ -315,6 +324,12 @@ export default function AdminDashboard() {
               formatValue={formatCurrencyCompact}
               emptyMessage={strings.dashboard.charts.empty}
             />
+          ) : (
+            /* Says the figure cannot be fetched, rather than drawing an empty
+               chart that reads as a week of zero trade. See api-gaps.md G5. */
+            <InlineMessage tone="info" icon="information-outline">
+              {strings.dashboard.charts.unavailable}
+            </InlineMessage>
           )}
         </SectionCard>
 

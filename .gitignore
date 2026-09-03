@@ -73,3 +73,11 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Markdown notes and docs
+*.md
+
+# Environment files: never commit secrets or machine-specific hosts
+.env
+.env.*
+!.env.example

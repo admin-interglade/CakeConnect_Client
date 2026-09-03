@@ -61,9 +61,18 @@ export type Shop = {
   /** FR-14 — per-shop cut-off as "HH:mm" IST; absent means the global default. */
   cutoffOverride?: string;
   outstanding: number;
-  paidToDate: number;
-  /** FR-38 — the shop's order state for today's cut-off cycle. */
-  todaysOrderStatus: OrderStatus | 'no_order';
+  /**
+   * Undefined when the source payload does not carry it. `GET /shops` reports
+   * outstanding but not payments-to-date, and zeroing it would read as "this
+   * shop has never paid" rather than "not known here". See docs/api-gaps.md G3.
+   */
+  paidToDate?: number;
+  /**
+   * FR-38 — the shop's order state for today's cut-off cycle. No backend field
+   * supplies this; undefined means "not known", which is not the same as
+   * `'no_order'`. See docs/api-gaps.md G4.
+   */
+  todaysOrderStatus?: OrderStatus | 'no_order';
   /** FR-2 — set until the invited owner completes their first login. */
   inviteSentAt?: string;
   createdAt: string;
@@ -282,6 +291,23 @@ export type AuditEntry = {
 export type PriceList = {
   id: string;
   name: string;
+};
+
+/**
+ * FR-39 — a shop's payment history, which is a distinct record from the ledger
+ * entry a confirmed payment produces: a payment can sit in PENDING_CONFIRMATION
+ * (FR-30) and never reach the ledger at all.
+ */
+export type Payment = {
+  id: string;
+  date: string;
+  amount: number;
+  /** UPI | CARD | NET_BANKING | CASH | CHEQUE | NEFT, as the backend reports it. */
+  method: string;
+  /** PENDING | SUCCESS | FAILED | PENDING_CONFIRMATION | REJECTED | REFUNDED. */
+  status: string;
+  reference: string;
+  note?: string;
 };
 
 /** Every list endpoint pages the same way. */

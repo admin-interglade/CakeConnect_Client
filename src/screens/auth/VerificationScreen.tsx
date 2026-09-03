@@ -11,13 +11,21 @@ import {
   Screen,
 } from '../../components';
 import useCountdown from '../../hooks/useCountdown';
-import { requestOtp, verifyOtp } from '../../services/authApi';
+import { requestOtp, verifyOtp } from '../../services/admin';
+import { describeApiError } from '../../services/api';
 import { colors, fontWeight, spacing } from '../../constants';
 import type { AuthStackParamList, PendingSession } from '../../navigation/types';
 
 type Props = StackScreenProps<AuthStackParamList, 'Verification'>;
 
 const OTP_LENGTH = 6;
+
+/**
+ * A local guard only. The backend reports a wrong code as an HTTP error and
+ * exposes no attempt counter, so this is a UI affordance that nudges the user
+ * toward a fresh code — not a server-enforced limit. The real protection is the
+ * rate limiter on `/auth/verify-otp`.
+ */
 const MAX_ATTEMPTS = 3;
 
 export default function VerificationScreen({ navigation, route }: Props) {
@@ -45,14 +53,37 @@ export default function VerificationScreen({ navigation, route }: Props) {
       setError(undefined);
 
       try {
-        const result = await verifyOtp(`${dialCode}${nationalNumber}`, submitted, attemptsLeft);
+        const result = await verifyOtp(nationalNumber, submitted);
 
-        if (result.status === 'invalid') {
-          setAttemptsLeft(result.attemptsLeft);
+        const session: PendingSession = {
+          userId: result.userId,
+          token: result.accessToken,
+          refreshToken: result.refreshToken,
+          role: result.role,
+          phone: displayPhone,
+          fullName: result.fullName,
+          email: result.email,
+          shops: result.shops,
+        };
+
+        navigation.navigate(
+          result.profileComplete ? 'Biometric' : 'Profile',
+          { session },
+        );
+      } catch (caught) {
+        // A rejected code arrives as an HTTP error rather than a success body,
+        // so the attempt counter is decremented here rather than read back.
+        const status = (caught as { response?: { status?: number } })?.response
+          ?.status;
+        const isRejectedCode = status === 400 || status === 401;
+
+        if (isRejectedCode) {
+          const remaining = Math.max(attemptsLeft - 1, 0);
+          setAttemptsLeft(remaining);
           setError(
-            result.attemptsLeft > 0
-              ? `Invalid OTP. Please try again. (${result.attemptsLeft} attempt${
-                  result.attemptsLeft === 1 ? '' : 's'
+            remaining > 0
+              ? `Invalid OTP. Please try again. (${remaining} attempt${
+                  remaining === 1 ? '' : 's'
                 } left)`
               : 'Too many incorrect attempts. Request a new code to continue.',
           );
@@ -60,27 +91,12 @@ export default function VerificationScreen({ navigation, route }: Props) {
           return;
         }
 
-        const session: PendingSession = {
-          userId: result.userId,
-          token: result.token,
-          role: result.role,
-          phone: displayPhone,
-          fullName: result.fullName,
-          email: result.email,
-          assignedShop: result.assignedShop,
-        };
-
-        navigation.navigate(
-          result.profileComplete ? 'Biometric' : 'Profile',
-          { session },
-        );
-      } catch {
-        setError('Could not verify the code. Check your connection and try again.');
+        setError(describeApiError(caught));
       } finally {
         setVerifying(false);
       }
     },
-    [attemptsLeft, dialCode, displayPhone, isLockedOut, nationalNumber, navigation],
+    [attemptsLeft, displayPhone, isLockedOut, nationalNumber, navigation],
   );
 
   const handleResend = React.useCallback(async () => {
@@ -93,15 +109,15 @@ export default function VerificationScreen({ navigation, route }: Props) {
     setCode('');
 
     try {
-      const { resendAfterSeconds: nextDelay } = await requestOtp(`${dialCode}${nationalNumber}`);
+      const { resendAfterSeconds: nextDelay } = await requestOtp(nationalNumber);
       setAttemptsLeft(MAX_ATTEMPTS);
       restart(nextDelay);
-    } catch {
-      setError('Could not resend the code. Try again in a moment.');
+    } catch (caught) {
+      setError(describeApiError(caught));
     } finally {
       setResending(false);
     }
-  }, [dialCode, isRunning, nationalNumber, resending, restart]);
+  }, [isRunning, nationalNumber, resending, restart]);
 
   return (
     <Screen

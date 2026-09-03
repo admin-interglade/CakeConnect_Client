@@ -21,6 +21,7 @@ type Props = StackScreenProps<AuthStackParamList, 'AllSet'>;
 const roleLabels: Record<string, string> = {
   shopOwner: 'Store Manager',
   admin: 'Network Administrator',
+  supportStaff: 'Support Staff',
 };
 
 export default function AllSetScreen({ route }: Props) {
@@ -36,6 +37,9 @@ export default function AllSetScreen({ route }: Props) {
     dispatch(
       setCredentials({
         token: session.token,
+        refreshToken: session.refreshToken,
+        // FR-4 — the whole outlet list; the slice picks the active one.
+        shops: session.shops,
         biometricsEnabled,
         user: {
           id: session.userId,
@@ -44,7 +48,6 @@ export default function AllSetScreen({ route }: Props) {
           role: session.role,
           name: session.fullName,
           photoUri: session.photoUri,
-          assignedShop: session.assignedShop,
         },
       }),
     );
@@ -90,7 +93,7 @@ export default function AllSetScreen({ route }: Props) {
           subtitle={roleLabels[session.role] ?? 'Franchise user'}
         />
 
-        {session.assignedShop ? (
+        {session.shops.length > 0 ? (
           <View style={styles.shopRow}>
             <Icon
               name="storefront-outline"
@@ -99,7 +102,9 @@ export default function AllSetScreen({ route }: Props) {
               style={styles.shopIcon}
             />
             <AppText variant="caption">
-              {session.assignedShop.area} ({session.assignedShop.code})
+              {session.shops.length === 1
+                ? `${session.shops[0].area} (${session.shops[0].code})`
+                : `${session.shops.length} outlets`}
             </AppText>
           </View>
         ) : null}

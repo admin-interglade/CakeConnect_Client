@@ -36,16 +36,19 @@ const navigationProp = navigation as never;
 
 const session: PendingSession = {
   userId: 'usr_demo_1',
-  token: 'demo-jwt-token',
+  token: 'test-access-token',
+  refreshToken: 'test-refresh-token',
   role: 'shopOwner',
   phone: '+91 98765 43210',
   fullName: 'Aarav Sharma',
-  assignedShop: {
-    id: 'shop_204',
-    name: 'CakeConnect - Sector 15, Gurgaon',
-    code: '#204',
-    area: 'Sector 15, Gurgaon',
-  },
+  shops: [
+    {
+      id: 'shop_204',
+      name: 'CakeConnect - Sector 15, Gurgaon',
+      code: '#204',
+      area: 'Sector 15, Gurgaon',
+    },
+  ],
 };
 
 async function render(element: React.ReactElement) {
