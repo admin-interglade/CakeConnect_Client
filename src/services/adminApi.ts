@@ -20,6 +20,7 @@ import type {
   Order,
   OrderFilters,
   OrderStatus,
+  OrderStatusCounts,
   OrderTrendPoint,
   Paginated,
   Pagination,
@@ -32,6 +33,7 @@ import type {
   ShopFilters,
   ShopInput,
   ShopStatus,
+  ShortSupplyLine,
   TopProductPoint,
 } from '../types/admin';
 import { addDays, creditUtilisation, toApiDate } from '../utils/format';
@@ -532,6 +534,40 @@ export async function getOrders(
 }
 
 /**
+ * The queue tab counts for the current filters, minus the status itself — the
+ * tabs have to keep showing what sits behind them while one of them is open,
+ * so the count cannot come from the filtered page the list is already holding.
+ */
+export async function getOrderStatusCounts(
+  filters: OrderFilters,
+): Promise<OrderStatusCounts> {
+  // TODO: httpClient.get('/admin/orders/counts', { params: { ...filters } })
+  await delay(300);
+
+  const search = filters.search.trim().toLowerCase();
+
+  const matching = orders.filter(order => {
+    const date = filters.dateField === 'orderDate' ? order.orderDate : order.deliveryDate;
+    if (!inRange(date, filters.range)) {
+      return false;
+    }
+    if (filters.shopId !== 'all' && order.shopId !== filters.shopId) {
+      return false;
+    }
+    return search ? order.id.toLowerCase().includes(search) : true;
+  });
+
+  return matching.reduce<OrderStatusCounts>(
+    (counts, order) => ({
+      ...counts,
+      all: counts.all + 1,
+      [order.status]: (counts[order.status] ?? 0) + 1,
+    }),
+    { all: 0 },
+  );
+}
+
+/**
  * FR-17 — active shops with no order for today's cut-off. Returned as
  * placeholder orders so the list screen can render one table for both views.
  */
@@ -625,6 +661,60 @@ export async function updateOrderStatus(
     field: previous.id,
     before: previous.status,
     after: status,
+  });
+
+  return updated;
+}
+
+/**
+ * FR-40 — the shortfall declared before the van loads, rather than discovered
+ * at delivery. It writes the quantities the kitchen will actually send and the
+ * reason for each gap, and leaves the status where it is: the order still has
+ * to travel through the rest of the flow.
+ */
+export async function captureShortSupply(
+  orderId: string,
+  lines: ShortSupplyLine[],
+): Promise<Order> {
+  // TODO: httpClient.post(`/admin/orders/${orderId}/short-supply`, { lines })
+  await delay(600);
+
+  const index = orders.findIndex(order => order.id === orderId);
+  if (index === -1) {
+    throw new Error('Order not found');
+  }
+
+  const previous = orders[index];
+  const byProduct = new Map(lines.map(line => [line.productId, line]));
+
+  const items = previous.items.map(item => {
+    const line = byProduct.get(item.productId);
+    if (!line) {
+      return item;
+    }
+
+    const deliveredQty = Math.min(Math.max(line.deliveringQty, 0), item.orderedQty);
+    return {
+      ...item,
+      deliveredQty,
+      shortSupplyReason: deliveredQty < item.orderedQty ? line.reason : undefined,
+    };
+  });
+
+  const short = items.some(
+    item => item.deliveredQty !== undefined && item.deliveredQty < item.orderedQty,
+  );
+
+  const updated: Order = { ...previous, items, shortSupply: short || undefined };
+
+  orders[index] = updated;
+  recordAudit(previous.shopId, {
+    action: 'Short supply recorded',
+    field: previous.id,
+    before: `${previous.items.length} lines ordered in full`,
+    after: `${items.filter(
+      item => item.deliveredQty !== undefined && item.deliveredQty < item.orderedQty,
+    ).length} lines short`,
   });
 
   return updated;

@@ -60,6 +60,16 @@ export const queryKeys = {
         pagination.page,
         pagination.limit,
       ] as const,
+    counts: (filters: OrderFilters) =>
+      [
+        'orders',
+        'counts',
+        filters.search,
+        filters.shopId,
+        filters.dateField,
+        filters.range.from,
+        filters.range.to,
+      ] as const,
     pendingCutoff: ['orders', 'pendingCutoff'] as const,
     detail: (orderId: string) => ['orders', 'detail', orderId] as const,
   },

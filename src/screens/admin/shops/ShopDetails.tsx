@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Switch } from 'react-native-paper';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
@@ -7,31 +8,42 @@ import {
   AppButton,
   AppText,
   ConfirmDialog,
-  DataTable,
   DateRangePicker,
   EmptyState,
   ErrorState,
+  Icon,
   InlineMessage,
+  LedgerEntryCard,
   LoadingState,
   ModalForm,
+  OrderHistoryCard,
+  ProgressBar,
   Screen,
   ScreenHeader,
   SectionCard,
-  StatCard,
+  SegmentedTabs,
   StatusBadge,
-  type DataTableColumn,
   type FormField,
   type FormValues,
+  type SegmentedTab,
 } from '../../../components';
-import { colors, spacing, strings } from '../../../constants';
+import {
+  borderRadius,
+  borderWidth,
+  colors,
+  iconSize,
+  spacing,
+  strings,
+} from '../../../constants';
 import { usePriceLists, useShopDetails, useShopMutations } from '../../../hooks';
 import { defaultRange } from '../../../utils/dateRange';
 import {
   creditUtilisation,
   formatCurrency,
   formatCurrencyCompact,
-  formatDate,
   formatDateTime,
+  formatMonthYear,
+  formatNumber,
   formatPercent,
 } from '../../../utils/format';
 import type { AdminShopsStackParamList } from '../../../navigation/types';
@@ -39,7 +51,6 @@ import type {
   AuditEntry,
   DateRange,
   LedgerEntry,
-  Order,
   ShopInput,
   ShopStatus,
 } from '../../../types/admin';
@@ -47,12 +58,15 @@ import type {
 type ShopDetailsNavigation = StackNavigationProp<AdminShopsStackParamList, 'ShopDetails'>;
 type ShopDetailsRoute = RouteProp<AdminShopsStackParamList, 'ShopDetails'>;
 
+type DetailTab = 'overview' | 'orders' | 'ledger' | 'payments';
+
 /**
  * FR-2 / FR-39 shop detail.
  *
  * One screen covers all three modes: without a `shopId` it opens straight into
- * the create form; with one it shows the profile, credit, order history,
- * ledger and audit trail, and opens the same form for edits.
+ * the create form; with one it shows the profile header, then splits the record
+ * across four tabs — overview (credit and the month's figures), order history,
+ * ledger and payments — with the same form behind the edit action.
  */
 export default function ShopDetails() {
   const navigation = useNavigation<ShopDetailsNavigation>();
@@ -61,12 +75,26 @@ export default function ShopDetails() {
   const isCreateMode = !shopId;
 
   const [range, setRange] = React.useState<DateRange>(defaultRange);
+  const [tab, setTab] = React.useState<DetailTab>('overview');
   const [formOpen, setFormOpen] = React.useState(isCreateMode);
+  const [creditOpen, setCreditOpen] = React.useState(false);
   const [adjustmentOpen, setAdjustmentOpen] = React.useState(false);
+  const [showProfile, setShowProfile] = React.useState(false);
+  //const [showAudit, setShowAudit] = React.useState(false);
   const [pendingStatus, setPendingStatus] = React.useState<ShopStatus | null>(null);
 
-  const { shop, ledger, orders, audit, isLoading, isError, error, isRefetching, refetch } =
-    useShopDetails(shopId, range);
+  const {
+    shop,
+    ledger,
+    orders,
+   // audit,
+    summary,
+    isLoading,
+    isError,
+    error,
+    isRefetching,
+    refetch,
+  } = useShopDetails(shopId, range);
 
   const priceLists = usePriceLists();
   const { create, update, changeStatus, addAdjustment } = useShopMutations();
@@ -153,19 +181,21 @@ export default function ShopDetails() {
     [shop, priceLists],
   );
 
+  const toInput = (values: FormValues): ShopInput => ({
+    name: values.name.trim(),
+    code: values.code.trim(),
+    ownerName: values.ownerName.trim(),
+    ownerPhone: values.ownerPhone.replace(/\D/g, ''),
+    ownerEmail: values.ownerEmail.trim() || undefined,
+    address: values.address.trim(),
+    gstin: values.gstin.trim().toUpperCase() || undefined,
+    region: values.region.trim() || undefined,
+    creditLimit: Number(values.creditLimit),
+    priceListId: values.priceListId,
+  });
+
   const submitShop = (values: FormValues) => {
-    const input: ShopInput = {
-      name: values.name.trim(),
-      code: values.code.trim(),
-      ownerName: values.ownerName.trim(),
-      ownerPhone: values.ownerPhone.replace(/\D/g, ''),
-      ownerEmail: values.ownerEmail.trim() || undefined,
-      address: values.address.trim(),
-      gstin: values.gstin.trim().toUpperCase() || undefined,
-      region: values.region.trim() || undefined,
-      creditLimit: Number(values.creditLimit),
-      priceListId: values.priceListId,
-    };
+    const input = toInput(values);
 
     const onDone = () => {
       setFormOpen(false);
@@ -179,6 +209,24 @@ export default function ShopDetails() {
     } else {
       update.mutate({ shopId, input }, { onSuccess: onDone });
     }
+  };
+
+  /**
+   * FR-38 — the credit limit on its own. It goes through the same update
+   * endpoint, with every other field carried over from the loaded shop.
+   */
+  const submitCreditLimit = (values: FormValues) => {
+    if (!shopId) {
+      return;
+    }
+
+    update.mutate(
+      {
+        shopId,
+        input: { ...toInput(initialValues), creditLimit: Number(values.creditLimit) },
+      },
+      { onSuccess: () => setCreditOpen(false) },
+    );
   };
 
   /** FR-39 — a manual adjustment or, when negative, a credit note. */
@@ -245,12 +293,41 @@ export default function ShopDetails() {
   }
 
   const utilisation = creditUtilisation(shop.creditUsed, shop.creditLimit);
+  // Over 80% of the limit is the point at which the admin needs to notice.
+  const creditTone =
+    utilisation >= 100 ? colors.error : utilisation >= 80 ? colors.warning : colors.success;
+  const creditNote =
+    utilisation >= 100
+      ? strings.shopDetails.creditBreached
+      : utilisation >= 80
+      ? strings.shopDetails.creditWatch
+      : strings.shopDetails.creditHealthy;
+
+  const payments = ledger.filter(
+    entry => entry.type === 'payment' || entry.type === 'credit_note',
+  );
+
+  const tabs: SegmentedTab<DetailTab>[] = [
+    { key: 'overview', label: strings.shopDetails.tabs.overview },
+    { key: 'orders', label: strings.shopDetails.tabs.orders, badge: orders.length },
+    { key: 'ledger', label: strings.shopDetails.tabs.ledger, badge: ledger.length },
+    { key: 'payments', label: strings.shopDetails.tabs.payments, badge: payments.length },
+  ];
+
+  const billed = ledger
+    .filter(entry => entry.amount > 0)
+    .reduce((total, entry) => total + entry.amount, 0);
+  const received = payments.reduce((total, entry) => total + Math.abs(entry.amount), 0);
+  // The ledger arrives newest first, so the first row carries the closing balance.
+  const closingBalance = ledger[0]?.runningBalance ?? shop.outstanding;
+
+  const ordersValue = orders.reduce((total, order) => total + order.total, 0);
 
   return (
     <Screen>
       <ScreenHeader
-        title={shop.name}
-        subtitle={`${shop.code} · ${shop.region ?? '-'}`}
+        title={strings.shopDetails.title}
+        subtitle={shop.code}
         onBack={() => navigation.goBack()}
         actions={[
           {
@@ -259,9 +336,7 @@ export default function ShopDetails() {
             onPress: () => setFormOpen(true),
           },
         ]}
-      >
-        <StatusBadge status={shop.status} />
-      </ScreenHeader>
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -281,110 +356,290 @@ export default function ShopDetails() {
           </InlineMessage>
         ) : null}
 
-        <SectionCard title={strings.shopDetails.sectionProfile}>
-          <DetailRow label={strings.shopDetails.fields.ownerName} value={shop.ownerName} />
-          <DetailRow label={strings.shopDetails.fields.ownerPhone} value={shop.ownerPhone} />
-          <DetailRow
-            label={strings.shopDetails.fields.ownerEmail}
-            value={shop.ownerEmail ?? '-'}
-          />
-          <DetailRow label={strings.shopDetails.fields.address} value={shop.address} />
-          <DetailRow label={strings.shopDetails.fields.gstin} value={shop.gstin ?? '-'} />
-          {/* FR-6 — each shop sees only the price list assigned to it. */}
-          <DetailRow label={strings.shopDetails.priceList} value={shop.priceListName} />
-          {/* FR-14 — a per-shop cut-off overrides the global default. */}
-          <DetailRow
-            label={strings.shopDetails.cutoffOverride}
-            value={shop.cutoffOverride ?? strings.shopDetails.cutoffGlobal}
-          />
-        </SectionCard>
+        {/* Identity, live status and the three details an admin calls on. */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileHeader}>
+            <View style={styles.identity}>
+              <AppText variant="h2" numberOfLines={1}>
+                {shop.name}
+              </AppText>
+              <AppText variant="bodySecondary" numberOfLines={1}>
+                {shop.region ?? shop.address}
+              </AppText>
+            </View>
 
-        <SectionCard title={strings.shopDetails.sectionCredit}>
-          <View style={styles.creditTiles}>
-            <StatCard
-              label={strings.shopDetails.creditLimit}
-              value={formatCurrencyCompact(shop.creditLimit)}
-            />
-            <StatCard
-              label={strings.shopDetails.creditUsed}
-              value={formatCurrencyCompact(shop.creditUsed)}
-              caption={formatPercent(utilisation)}
-              tone={utilisation >= 90 ? 'warning' : 'default'}
-            />
-            <StatCard
-              label={strings.shopDetails.creditAvailable}
-              value={formatCurrencyCompact(shop.creditAvailable)}
-              tone={shop.creditAvailable <= 0 ? 'warning' : 'success'}
-            />
+            <View style={styles.statusControl}>
+              <StatusBadge status={shop.status} />
+              {/* FR-3 — suspend and reactivate without leaving the profile. */}
+              <Switch
+                value={shop.status === 'active'}
+                onValueChange={() =>
+                  setPendingStatus(shop.status === 'active' ? 'suspended' : 'active')
+                }
+                color={colors.success}
+                accessibilityLabel={strings.shopDetails.statusToggle}
+              />
+            </View>
           </View>
-        </SectionCard>
 
-        <SectionCard title={strings.shopDetails.sectionOrders} flush={orders.length > 0}>
-          {orders.length > 0 ? (
-            <DataTable<Order>
-              columns={orderColumns}
-              rows={orders}
-              keyExtractor={order => order.id}
-              onRowPress={order => navigation.navigate('OrderDetails', { orderId: order.id })}
-            />
-          ) : (
-            <EmptyState icon="clipboard-outline" title={strings.shopDetails.noOrders} />
-          )}
-        </SectionCard>
+          <View style={styles.profileDivider} />
 
-        {/* FR-23 / FR-39 — the shared ledger with its running balance. */}
-        <SectionCard
-          title={strings.shopDetails.sectionLedger}
-          actionLabel={strings.shopDetails.adjustment}
-          actionIcon="plus"
-          onAction={() => setAdjustmentOpen(true)}
-        >
-          <DateRangePicker value={range} onChange={setRange} style={styles.ledgerRange} />
+          <DetailRow label={strings.shopDetails.franchiseOwner} value={shop.ownerName} />
+          <DetailRow label={strings.shopDetails.contactNumber} value={shop.ownerPhone} />
+          <DetailRow label={strings.shopDetails.taxId} value={shop.gstin ?? '-'} />
 
-          {ledger.length > 0 ? (
-            <DataTable<LedgerEntry>
-              columns={ledgerColumns}
-              rows={ledger}
-              keyExtractor={entry => entry.id}
-              style={styles.ledgerTable}
-            />
-          ) : (
-            <AppText variant="bodySecondary" align="center" style={styles.empty}>
-              {strings.shopDetails.noLedger}
-            </AppText>
-          )}
-        </SectionCard>
+          {showProfile ? (
+            <>
+              <DetailRow
+                label={strings.shopDetails.fields.ownerEmail}
+                value={shop.ownerEmail ?? '-'}
+              />
+              <DetailRow
+                label={strings.shopDetails.fields.address}
+                value={shop.address}
+                stacked
+              />
+              {/* FR-6 — each shop sees only the price list assigned to it. */}
+              <DetailRow label={strings.shopDetails.priceList} value={shop.priceListName} />
+              {/* FR-14 — a per-shop cut-off overrides the global default. */}
+              <DetailRow
+                label={strings.shopDetails.cutoffOverride}
+                value={shop.cutoffOverride ?? strings.shopDetails.cutoffGlobal}
+              />
+            </>
+          ) : null}
 
-        {/* PRD §3 — every administrative action, with actor and before/after. */}
-        <SectionCard title={strings.shopDetails.sectionAudit}>
-          {audit.length > 0 ? (
-            <DataTable<AuditEntry>
-              columns={auditColumns}
-              rows={audit}
-              keyExtractor={entry => entry.id}
-            />
-          ) : (
-            <AppText variant="bodySecondary" align="center" style={styles.empty}>
-              {strings.shopDetails.noAudit}
-            </AppText>
-          )}
-        </SectionCard>
-
-        <View style={styles.dangerZone}>
           <AppButton
             label={
-              shop.status === 'active' ? strings.shops.suspend : strings.shops.reactivate
+              showProfile ? strings.shopDetails.hideDetails : strings.shopDetails.moreDetails
             }
-            onPress={() => setPendingStatus(shop.status === 'active' ? 'suspended' : 'active')}
-            variant="outline"
-          />
-          <AppButton
-            label={strings.shops.deactivate}
-            onPress={() => setPendingStatus('inactive')}
-            variant="outline"
-            disabled={shop.status === 'inactive'}
+            icon={showProfile ? 'chevron-up' : 'chevron-down'}
+            variant="link"
+            onPress={() => setShowProfile(current => !current)}
+            style={styles.profileToggle}
           />
         </View>
+
+        <SegmentedTabs tabs={tabs} value={tab} onChange={setTab} />
+
+        {tab === 'overview' ? (
+          <>
+            {/* FR-38 — usage, headroom and the meter between them. */}
+            <SectionCard title={strings.shopDetails.sectionCredit}>
+              <View style={styles.creditRow}>
+                <View style={styles.creditColumn}>
+                  <AppText variant="caption">{strings.shopDetails.creditUsed}</AppText>
+                  <AppText variant="h2" numberOfLines={1} adjustsFontSizeToFit>
+                    {formatCurrency(shop.creditUsed)}
+                  </AppText>
+                </View>
+
+                <View style={styles.creditColumnRight}>
+                  <AppText variant="caption" align="right">
+                    {strings.shopDetails.creditAvailable}
+                  </AppText>
+                  <AppText
+                    variant="h2"
+                    align="right"
+                    color={shop.creditAvailable <= 0 ? colors.error : colors.success}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {formatCurrency(shop.creditAvailable)}
+                  </AppText>
+                </View>
+              </View>
+
+              <ProgressBar
+                value={utilisation}
+                tone={creditTone}
+                style={styles.creditBar}
+                accessibilityLabel={strings.shops.creditUtilisation(
+                  formatPercent(utilisation),
+                )}
+              />
+
+              <View style={styles.creditFooter}>
+                <AppText variant="caption">
+                  {strings.shopDetails.creditUsedCaption(
+                    formatCurrencyCompact(shop.creditUsed),
+                    formatCurrencyCompact(shop.creditLimit),
+                  )}
+                </AppText>
+                <AppText variant="caption" color={creditTone}>
+                  {`${formatPercent(utilisation)} · ${creditNote}`}
+                </AppText>
+              </View>
+            </SectionCard>
+
+            <SectionCard title={strings.shopDetails.sectionMonthly}>
+              <SummaryRow
+                icon="clipboard-text-outline"
+                label={strings.shopDetails.ordersThisMonth}
+                value={strings.shopDetails.ordersInRange(summary.orderCount)}
+              />
+              <SummaryRow
+                icon="cash-multiple"
+                label={strings.shopDetails.totalOrderValue}
+                value={formatCurrency(summary.orderValue)}
+              />
+              <SummaryRow
+                icon="cash-check"
+                label={strings.shopDetails.paymentsReceived}
+                value={formatCurrency(summary.paymentsReceived)}
+                tone={colors.success}
+                last
+              />
+            </SectionCard>
+
+            <AppButton
+              label={strings.shopDetails.adjustCreditLimit}
+              onPress={() => setCreditOpen(true)}
+              style={styles.primaryAction}
+            />
+            <AppButton
+              label={strings.shopDetails.adjustment}
+              variant="outline"
+              onPress={() => setAdjustmentOpen(true)}
+              style={styles.primaryAction}
+            />
+
+            {/* PRD §3 — every administrative action, with actor and before/after. */}
+            {/* <SectionCard
+              title={strings.shopDetails.sectionAudit}
+              actionLabel={showAudit ? strings.common.close : strings.common.view}
+              actionIcon={showAudit ? 'chevron-up' : 'chevron-down'}
+              onAction={() => setShowAudit(current => !current)}
+              style={styles.auditCard}
+            >
+              {showAudit ? (
+                audit.length > 0 ? (
+                  audit.map((entry, index) => (
+                    <AuditRow
+                      key={entry.id}
+                      entry={entry}
+                      last={index === audit.length - 1}
+                    />
+                  ))
+                ) : (
+                  <AppText variant="bodySecondary" align="center" style={styles.empty}>
+                    {strings.shopDetails.noAudit}
+                  </AppText>
+                )
+              ) : null}
+            </SectionCard> */}
+
+            <AppButton
+              label={strings.shopDetails.deactivateShop}
+              onPress={() => setPendingStatus('inactive')}
+              variant="outline"
+              disabled={shop.status === 'inactive'}
+            />
+          </>
+        ) : null}
+
+        {tab === 'orders' ? (
+          <SectionCard title={strings.shopDetails.sectionOrders}>
+            <DateRangePicker value={range} onChange={setRange} style={styles.rangePicker} />
+
+            <View style={styles.totalsStrip}>
+              <Total
+                label={strings.shopDetails.tabs.orders}
+                value={formatNumber(orders.length)}
+              />
+              <Total
+                label={strings.shopDetails.totalOrderValue}
+                value={formatCurrencyCompact(ordersValue)}
+                align="right"
+              />
+            </View>
+
+            {orders.length > 0 ? (
+              orders.map(order => (
+                <OrderHistoryCard
+                  key={order.id}
+                  order={order}
+                  onPress={() => navigation.navigate('OrderDetails', { orderId: order.id })}
+                />
+              ))
+            ) : (
+              <EmptyState icon="clipboard-outline" title={strings.shopDetails.noOrders} />
+            )}
+          </SectionCard>
+        ) : null}
+
+        {/* FR-23 / FR-39 — the shared ledger with its running balance. */}
+        {tab === 'ledger' ? (
+          <SectionCard
+            title={strings.shopDetails.sectionLedger}
+            actionLabel={strings.common.add}
+            actionIcon="plus"
+            onAction={() => setAdjustmentOpen(true)}
+          >
+            <DateRangePicker value={range} onChange={setRange} style={styles.rangePicker} />
+
+            <View style={styles.totalsStrip}>
+              <Total
+                label={strings.shopDetails.ledgerBilled}
+                value={formatCurrencyCompact(billed)}
+              />
+              <Total
+                label={strings.shopDetails.ledgerReceived}
+                value={formatCurrencyCompact(received)}
+                tone={colors.success}
+                align="center"
+              />
+              <Total
+                label={strings.shopDetails.ledgerClosing}
+                value={formatCurrencyCompact(closingBalance)}
+                tone={closingBalance > 0 ? colors.textPrimary : colors.success}
+                align="right"
+              />
+            </View>
+
+            {ledger.length > 0 ? (
+              groupByMonth(ledger).map(group => (
+                <View key={group.label}>
+                  <AppText variant="kicker" style={styles.groupHeading}>
+                    {group.label}
+                  </AppText>
+                  {group.entries.map(entry => (
+                    <LedgerEntryCard key={entry.id} entry={entry} />
+                  ))}
+                </View>
+              ))
+            ) : (
+              <EmptyState icon="book-open-outline" title={strings.shopDetails.noLedger} />
+            )}
+          </SectionCard>
+        ) : null}
+
+        {tab === 'payments' ? (
+          <SectionCard title={strings.shopDetails.sectionPayments}>
+            <DateRangePicker value={range} onChange={setRange} style={styles.rangePicker} />
+
+            <View style={styles.totalsStrip}>
+              <Total
+                label={strings.shopDetails.paymentsReceived}
+                value={formatCurrency(received)}
+                tone={colors.success}
+              />
+              <Total
+                label={strings.shopDetails.ledgerClosing}
+                value={formatCurrencyCompact(closingBalance)}
+                align="right"
+              />
+            </View>
+
+            {payments.length > 0 ? (
+              payments.map(entry => (
+                <LedgerEntryCard key={entry.id} entry={entry} showBalance={false} />
+              ))
+            ) : (
+              <EmptyState icon="cash-remove" title={strings.shopDetails.noPayments} />
+            )}
+          </SectionCard>
+        ) : null}
       </ScrollView>
 
       <ModalForm
@@ -395,6 +650,17 @@ export default function ShopDetails() {
         submitting={update.isPending}
         onSubmit={submitShop}
         onDismiss={() => setFormOpen(false)}
+      />
+
+      <ModalForm
+        visible={creditOpen}
+        title={strings.shopDetails.adjustCreditTitle}
+        fields={creditLimitFields}
+        initialValues={{ creditLimit: String(shop.creditLimit) }}
+        submitLabel={strings.common.save}
+        submitting={update.isPending}
+        onSubmit={submitCreditLimit}
+        onDismiss={() => setCreditOpen(false)}
       />
 
       <ModalForm
@@ -451,18 +717,141 @@ export default function ShopDetails() {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  stacked = false,
+}: {
+  label: string;
+  value: string;
+  /** Long values such as the address read better under their label. */
+  stacked?: boolean;
+}) {
+  if (stacked) {
+    return (
+      <View style={styles.detailStacked}>
+        <AppText variant="caption">{label}</AppText>
+        <AppText variant="body">{value}</AppText>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.detailRow}>
       <AppText variant="caption" style={styles.detailLabel}>
         {label}
       </AppText>
-      <AppText variant="body" style={styles.detailValue}>
+      <AppText variant="body" align="right" numberOfLines={1} style={styles.detailValue}>
         {value}
       </AppText>
     </View>
   );
 }
+
+function SummaryRow({
+  icon,
+  label,
+  value,
+  tone = colors.textPrimary,
+  last = false,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  tone?: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.summaryRow, last && styles.summaryRowLast]}>
+      <Icon name={icon} size={iconSize.md} color={colors.textSecondary} />
+      <AppText variant="bodySecondary" numberOfLines={1} style={styles.summaryLabel}>
+        {label}
+      </AppText>
+      <AppText variant="body" color={tone} numberOfLines={1} style={styles.summaryValue}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function Total({
+  label,
+  value,
+  tone = colors.textPrimary,
+  align = 'left',
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  align?: 'left' | 'center' | 'right';
+}) {
+  return (
+    <View style={styles.total}>
+      <AppText variant="caption" align={align} numberOfLines={1}>
+        {label}
+      </AppText>
+      <AppText variant="h3" align={align} color={tone} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function AuditRow({ entry, last }: { entry: AuditEntry; last: boolean }) {
+  const change =
+    entry.before !== undefined || entry.after !== undefined
+      ? `${entry.before ?? '-'} → ${entry.after ?? '-'}`
+      : undefined;
+
+  return (
+    <View style={[styles.auditRow, last && styles.auditRowLast]}>
+      <View style={styles.auditMarker} />
+      <View style={styles.auditBody}>
+        <AppText variant="body" numberOfLines={2}>
+          {entry.action}
+        </AppText>
+        {change ? (
+          <AppText variant="bodySecondary" numberOfLines={2}>
+            {change}
+          </AppText>
+        ) : null}
+        <AppText variant="caption" numberOfLines={1}>
+          {`${entry.actor} · ${formatDateTime(entry.at)}`}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
+/** Splits the ledger into month headings, keeping its newest-first order. */
+function groupByMonth(entries: LedgerEntry[]) {
+  const groups: { label: string; entries: LedgerEntry[] }[] = [];
+
+  entries.forEach(entry => {
+    const label = formatMonthYear(entry.date);
+    const current = groups[groups.length - 1];
+
+    if (current && current.label === label) {
+      current.entries.push(entry);
+    } else {
+      groups.push({ label, entries: [entry] });
+    }
+  });
+
+  return groups;
+}
+
+const creditLimitFields: FormField[] = [
+  {
+    name: 'creditLimit',
+    label: strings.shopDetails.fields.creditLimit,
+    type: 'number',
+    required: true,
+    hint: strings.shopDetails.adjustCreditHint,
+    validate: value =>
+      Number(value) >= 0 ? undefined : strings.shopDetails.errors.creditLimit,
+  },
+];
 
 const adjustmentFields: FormField[] = [
   {
@@ -471,8 +860,7 @@ const adjustmentFields: FormField[] = [
     type: 'number',
     required: true,
     hint: strings.shopDetails.adjustmentHint,
-    validate: value =>
-      Number(value) !== 0 ? undefined : strings.shopDetails.errors.amount,
+    validate: value => (Number(value) !== 0 ? undefined : strings.shopDetails.errors.amount),
   },
   {
     name: 'reference',
@@ -488,89 +876,86 @@ const adjustmentFields: FormField[] = [
   },
 ];
 
-const orderColumns: DataTableColumn<Order>[] = [
-  { key: 'id', title: 'Order', width: 100, render: order => order.id },
-  {
-    key: 'date',
-    title: 'Delivery',
-    width: 110,
-    render: order => formatDate(order.deliveryDate),
-  },
-  {
-    key: 'total',
-    title: 'Value',
-    width: 100,
-    align: 'right',
-    render: order => formatCurrency(order.total),
-  },
-  {
-    key: 'status',
-    title: 'Status',
-    width: 120,
-    render: order => <StatusBadge status={order.status} compact />,
-  },
-];
-
-const ledgerColumns: DataTableColumn<LedgerEntry>[] = [
-  { key: 'date', title: 'Date', width: 100, render: entry => formatDate(entry.date) },
-  { key: 'type', title: 'Type', width: 100, render: entry => ledgerTypeLabels[entry.type] },
-  { key: 'reference', title: 'Reference', width: 120, render: entry => entry.reference },
-  {
-    key: 'amount',
-    title: 'Amount',
-    width: 110,
-    align: 'right',
-    render: entry => (
-      <AppText
-        variant="bodySecondary"
-        align="right"
-        color={entry.amount < 0 ? colors.success : colors.textPrimary}
-      >
-        {formatCurrency(entry.amount)}
-      </AppText>
-    ),
-  },
-  {
-    key: 'balance',
-    title: strings.shopDetails.runningBalance,
-    width: 110,
-    align: 'right',
-    render: entry => formatCurrency(entry.runningBalance),
-  },
-];
-
-const ledgerTypeLabels: Record<LedgerEntry['type'], string> = {
-  order: 'Order',
-  invoice: 'Invoice',
-  payment: 'Payment',
-  credit_note: 'Credit note',
-  adjustment: 'Adjustment',
-};
-
-const auditColumns: DataTableColumn<AuditEntry>[] = [
-  { key: 'at', title: 'When', width: 150, render: entry => formatDateTime(entry.at) },
-  { key: 'actor', title: 'Actor', width: 130, render: entry => entry.actor },
-  { key: 'action', title: 'Action', width: 170, render: entry => entry.action },
-  {
-    key: 'change',
-    title: 'Before / after',
-    width: 200,
-    render: entry =>
-      entry.before !== undefined || entry.after !== undefined
-        ? `${entry.before ?? '-'} → ${entry.after ?? '-'}`
-        : '-',
-  },
-];
-
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
   notice: { marginBottom: spacing.md },
-  detailRow: { marginBottom: spacing.md },
-  detailLabel: { marginBottom: spacing.xxs },
-  detailValue: { flexShrink: 1 },
-  creditTiles: { flexDirection: 'row', gap: spacing.sm },
-  ledgerRange: { marginBottom: spacing.md },
-  ledgerTable: { marginTop: spacing.sm },
+
+  profileCard: {
+    backgroundColor: colors.surface,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  profileHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  identity: { flex: 1 },
+  statusControl: { alignItems: 'flex-end', gap: spacing.xs },
+  profileDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.divider,
+    marginVertical: spacing.md,
+  },
+  profileToggle: { alignSelf: 'flex-start', marginTop: spacing.xs },
+
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+    gap: spacing.md,
+  },
+  detailLabel: { flexShrink: 0 },
+  detailValue: { flex: 1 },
+  detailStacked: { paddingVertical: spacing.xs },
+
+  creditRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
+  creditColumn: { flex: 1 },
+  creditColumnRight: { flex: 1, alignItems: 'flex-end' },
+  creditBar: { marginTop: spacing.md },
+  creditFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.divider,
+  },
+  summaryRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
+  summaryLabel: { flex: 1, marginLeft: spacing.sm },
+  summaryValue: { fontWeight: '700', marginLeft: spacing.sm },
+
+  primaryAction: { marginBottom: spacing.sm },
+  auditCard: { marginTop: spacing.lg },
+
+  rangePicker: { marginBottom: spacing.md },
+  totalsStrip: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  total: { flex: 1 },
+  groupHeading: { marginBottom: spacing.sm, marginTop: spacing.xs },
+
+  auditRow: { flexDirection: 'row', paddingBottom: spacing.md },
+  auditRowLast: { paddingBottom: 0 },
+  auditMarker: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: borderRadius.circle,
+    backgroundColor: colors.primary,
+    marginTop: spacing.xs,
+    marginRight: spacing.md,
+  },
+  auditBody: { flex: 1 },
   empty: { paddingVertical: spacing.lg },
-  dangerZone: { gap: spacing.sm, marginTop: spacing.sm },
 });

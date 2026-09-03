@@ -22,6 +22,7 @@ import {
 import ProductionPlan from '../screens/admin/dashboard/ProductionPlan';
 import OrderDetails from '../screens/admin/order/OrderDetails';
 import OrdersList from '../screens/admin/order/OrdersList';
+import ShortSupply from '../screens/admin/order/ShortSupply';
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
@@ -75,6 +76,7 @@ function ShopsStack() {
       <ShopsStackNav.Screen name="ShopsList" component={ShopsList} />
       <ShopsStackNav.Screen name="ShopDetails" component={ShopDetails} />
       <ShopsStackNav.Screen name="OrderDetails" component={OrderDetails} />
+      <ShopsStackNav.Screen name="ShortSupply" component={ShortSupply} />
     </ShopsStackNav.Navigator>
   );
 }
@@ -84,6 +86,7 @@ function OrdersStack() {
     <OrdersStackNav.Navigator screenOptions={stackOptions}>
       <OrdersStackNav.Screen name="OrdersList" component={OrdersList} />
       <OrdersStackNav.Screen name="OrderDetails" component={OrderDetails} />
+      <OrdersStackNav.Screen name="ShortSupply" component={ShortSupply} />
       <OrdersStackNav.Screen name="ShopDetails" component={ShopDetails} />
     </OrdersStackNav.Navigator>
   );

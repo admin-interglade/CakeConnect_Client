@@ -73,6 +73,12 @@ export function formatShortDate(value: Date | string): string {
   return `${DAYS[ist.getUTCDay()]}, ${pad(ist.getUTCDate())} ${MONTHS[ist.getUTCMonth()]}`;
 }
 
+/** "Sep 2026" — the heading a grouped ledger or order list is split by. */
+export function formatMonthYear(value: Date | string): string {
+  const ist = toIst(value);
+  return `${MONTHS[ist.getUTCMonth()]} ${ist.getUTCFullYear()}`;
+}
+
 /** "22:00" in 24-hour IST, matching how the PRD states the cut-off. */
 export function formatTime(value: Date | string): string {
   const ist = toIst(value);
@@ -87,6 +93,51 @@ export function formatDateTime(value: Date | string): string {
 /** Inclusive range label, collapsing to a single date when both ends match. */
 export function formatDateRange(from: string, to: string): string {
   return from === to ? formatDate(from) : `${formatDate(from)} - ${formatDate(to)}`;
+}
+
+/**
+ * The label the orders queue puts on its date control: a single day reads as
+ * "Today, 26 Jan 2026" rather than repeating the same date twice.
+ */
+export function formatRangeLabel(from: string, to: string): string {
+  if (from !== to) {
+    return formatDateRange(from, to);
+  }
+
+  const today = toApiDate(new Date());
+  const prefix =
+    from === today ? 'Today, ' : from === addDays(today, -1) ? 'Yesterday, ' : '';
+
+  return `${prefix}${formatDate(from)}`;
+}
+
+/**
+ * "10m ago" / "3h ago" — how long since a status changed, which is what the
+ * queue cares about; anything older than a week falls back to the date.
+ */
+export function formatRelativeTime(value: Date | string): string {
+  const then = typeof value === 'string' ? parseIsoOrDate(value) : value;
+  const minutes = Math.floor((Date.now() - then.getTime()) / MS_PER_MINUTE);
+
+  if (minutes < 1) {
+    return 'just now';
+  }
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return days < 7 ? `${days}d ago` : formatShortDate(then);
+}
+
+/** "12 pcs" — a quantity beside the unit the product is counted in. */
+export function formatQuantity(quantity: number, unit: string): string {
+  return `${formatNumber(quantity)} ${unit}`;
 }
 
 /**
@@ -160,6 +211,21 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   dispatched: 'Dispatched',
   delivered: 'Delivered',
   invoiced: 'Invoiced',
+  cancelled: 'Cancelled',
+};
+
+/**
+ * The same statuses abbreviated for the order-progress stepper, where six
+ * labels share one row and "In production" would wrap to three lines.
+ */
+export const orderStatusShortLabels: Record<OrderStatus, string> = {
+  draft: 'Draft',
+  submitted: 'Sub',
+  accepted: 'Accept',
+  in_production: 'Produce',
+  dispatched: 'Dispatch',
+  delivered: 'Deliver',
+  invoiced: 'Invoice',
   cancelled: 'Cancelled',
 };
 

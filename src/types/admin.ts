@@ -83,7 +83,11 @@ export type ShopInput = {
   priceListId: string;
 };
 
-/** FR-5, FR-7 — `deliveredQty` is captured at the Delivered step (FR-40). */
+/**
+ * FR-5, FR-7 — `deliveredQty` is what the kitchen commits to sending: it is
+ * captured either up front on the short-supply screen or at the Delivered step
+ * (FR-40), and `shortSupplyReason` explains any gap below `orderedQty`.
+ */
 export type OrderItem = {
   productId: string;
   name: string;
@@ -95,6 +99,16 @@ export type OrderItem = {
   unitPrice: number;
   lineTotal: number;
   note?: string;
+  shortSupplyReason?: string;
+};
+
+/** One line of the short-supply declaration the admin confirms before delivery. */
+export type ShortSupplyLine = {
+  productId: string;
+  /** Quantity that will actually be sent; never above the ordered quantity. */
+  deliveringQty: number;
+  /** Required once `deliveringQty` is below the ordered quantity. */
+  reason?: string;
 };
 
 /** PRD §3 — every transition records who made it and when. */
@@ -301,3 +315,8 @@ export type OrderFilters = {
 };
 
 export type ExportFormat = 'csv' | 'pdf';
+
+/** Queue tab counts, so a tab can show how much work sits behind it. */
+export type OrderStatusCounts = {
+  all: number;
+} & Partial<Record<OrderStatus, number>>;
