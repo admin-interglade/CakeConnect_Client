@@ -1,6 +1,6 @@
 import { createListenerMiddleware } from '@reduxjs/toolkit';
 
-import { logoutSession } from '../services/authApi';
+import { logoutSession } from '../services/admin';
 import { logout } from './authSlice';
 import type { RootState } from './store';
 

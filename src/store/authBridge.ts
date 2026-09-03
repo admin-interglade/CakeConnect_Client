@@ -1,4 +1,4 @@
-import { configureHttpClient } from '../services/httpClient';
+import { configureHttpClient } from '../services/api';
 import { logout, setTokens } from './authSlice';
 import { store } from './store';
 

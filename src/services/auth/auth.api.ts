@@ -1,7 +1,7 @@
-import type { AssignedShop, UserRole } from '../store/authSlice';
-import { apiGet, apiPatch, apiPost, apiGetPaged } from './httpClient';
-import { userRoleCodec } from './mappers';
-import { getInstallationId } from './device';
+import type { AssignedShop, UserRole } from '../../store/authSlice';
+import { apiGet, apiPatch, apiPost, apiGetPaged } from '../api';
+import { userRoleCodec } from '../mappers';
+import { getInstallationId } from '../device';
 
 /**
  * Auth endpoints (FR-1, FR-2) against `/api/v1/auth` and `/api/v1/users`.

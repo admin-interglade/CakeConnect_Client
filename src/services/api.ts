@@ -71,7 +71,10 @@ const BASE_BACKOFF_MS = 500;
  */
 const IDEMPOTENT_METHODS = ['get', 'head', 'options'];
 
+type TimedConfig = InternalAxiosRequestConfig & { startedAt?: number };
+
 type RetryConfig = InternalAxiosRequestConfig & {
+  startedAt?: number;
   retryCount?: number;
   /** Set once a 401 on this request has already been through a refresh. */
   hasRetriedAuth?: boolean;
@@ -117,12 +120,77 @@ export const httpClient: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/* -------------------------------------------------------------------------- */
+/* Dev request log                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One line per request in development, so a failing screen can be traced to a
+ * method, a URL and a status without adding a console.log at the call site.
+ *
+ *   [API] -> GET /shops
+ *   [API] <- 200 GET /shops (142ms)
+ *   [API] xx 404 GET /production-plans/date/2026-09-04 (61ms) - No production plan found
+ *
+ * Silent in release builds: `__DEV__` is false there, and these lines would
+ * otherwise leak URLs and query strings into logcat.
+ */
+const logRequest = (method: string, url: string) => {
+  if (__DEV__) {
+  console.log(`[API] -> ${method} ${url}`);
+  }
+};
+
+const logResponse = (method: string, url: string, status: number, ms: number) => {
+  if (__DEV__) {
+    console.log(`[API] <- ${status} ${method} ${url} (${ms}ms)`);
+  }
+};
+
+const logFailure = (error: AxiosError) => {
+  if (!__DEV__) {
+    return;
+  }
+
+  const method = (error.config?.method ?? 'get').toUpperCase();
+  const url = error.config?.url ?? '';
+  const status = error.response?.status;
+  const started = (error.config as TimedConfig | undefined)?.startedAt;
+  const ms = started ? Date.now() - started : 0;
+  const body = error.response?.data as ApiErrorBody | undefined;
+
+  // The server's own message first: it is the one that says what was wrong.
+  const reason = body?.message ?? error.message;
+  const fields = body?.errors?.length
+    ? ` | ${body.errors.map(e => `${e.path}: ${e.message}`).join('; ')}`
+    : '';
+
+  console.log(
+    `[API] xx ${status ?? 'NETWORK'} ${method} ${url} (${ms}ms) - ${reason}${fields}`,
+  );
+};
+
 httpClient.interceptors.request.use(config => {
   const token = getToken();
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
+
+  (config as TimedConfig).startedAt = Date.now();
+  logRequest((config.method ?? 'get').toUpperCase(), config.url ?? '');
+
   return config;
+});
+
+httpClient.interceptors.response.use(response => {
+  const started = (response.config as TimedConfig).startedAt;
+  logResponse(
+    (response.config.method ?? 'get').toUpperCase(),
+    response.config.url ?? '',
+    response.status,
+    started ? Date.now() - started : 0,
+  );
+  return response;
 });
 
 /* -------------------------------------------------------------------------- */
@@ -182,6 +250,8 @@ httpClient.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as RetryConfig | undefined;
     const status = error.response?.status;
+
+    logFailure(error);
 
     if (status === 401 && config && !isAuthRoute(config.url)) {
       if (config.hasRetriedAuth) {
