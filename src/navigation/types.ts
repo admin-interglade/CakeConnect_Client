@@ -1,4 +1,4 @@
-import type { UserRole } from '../store/authSlice';
+import type { AssignedShop, UserRole } from '../store/authSlice';
 import type { OrderStatus } from '../types/admin';
 
 export type RootStackParamList = {
@@ -6,13 +6,8 @@ export type RootStackParamList = {
   App: undefined;
 };
 
-/** The franchise outlet the backend assigns to a shop owner at verification. */
-export type AssignedShop = {
-  id: string;
-  name: string;
-  code: string;
-  area: string;
-};
+/** Re-exported so the auth screens have one source for the outlet shape. */
+export type { AssignedShop };
 
 /**
  * Everything gathered during onboarding but not yet committed to the auth
@@ -22,14 +17,17 @@ export type AssignedShop = {
  */
 export type PendingSession = {
   userId: string;
+  /** The access token; paired with `refreshToken` so the session can renew. */
   token: string;
+  refreshToken: string;
   role: UserRole;
   /** Display form, e.g. "+91 98765 43210". */
   phone: string;
   fullName?: string;
   email?: string;
   photoUri?: string;
-  assignedShop?: AssignedShop;
+  /** FR-4 — every outlet this login can act on; empty for admin and support. */
+  shops: AssignedShop[];
 };
 
 export type AuthStackParamList = {

@@ -12,19 +12,20 @@ import {
   Screen,
 } from '../../components';
 import { loginWithPassword } from '../../services/authApi';
+import { describeApiError } from '../../services/httpClient';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList, PendingSession } from '../../navigation/types';
 
 type Props = StackScreenProps<AuthStackParamList, 'Login'>;
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NUMBER_LENGTH = 10;
 
 /**
- * Identifier + password sign-in, shared by both roles.
+ * Mobile number + password sign-in.
  *
- * The identifier accepts a mobile number or an email address and the backend
- * resolves which account it belongs to, so admins and shop owners use one form
- * and the screen never has to guess the role. The PRD's OTP flow (FR-1) is
+ * `POST /auth/login` resolves accounts by mobile number only — there is no
+ * email sign-in — so the field validates for ten digits rather than accepting
+ * an address the server would reject with a 400. The PRD's OTP flow (FR-1) is
  * still reachable from the link at the foot of the screen.
  */
 export default function LoginScreen({ navigation }: Props) {
@@ -35,14 +36,14 @@ export default function LoginScreen({ navigation }: Props) {
   const [submitting, setSubmitting] = React.useState(false);
 
   const trimmed = identifier.trim();
-  const digits = trimmed.replace(/\D/g, '');
-  // Ten digits, or something that at least looks like an address.
-  const identifierValid = digits.length >= 10 || emailPattern.test(trimmed);
+  // Tolerate a pasted number that still carries its +91 country code.
+  const digits = trimmed.replace(/\D/g, '').slice(-NUMBER_LENGTH);
+  const identifierValid = digits.length === NUMBER_LENGTH;
   const canSubmit = identifierValid && password.length > 0;
 
   const handleLogin = React.useCallback(async () => {
     if (!identifierValid) {
-      setFieldError('Enter a 10-digit mobile number or an email address.');
+      setFieldError(`Enter your ${NUMBER_LENGTH}-digit registered mobile number.`);
       return;
     }
     if (!password) {
@@ -55,8 +56,7 @@ export default function LoginScreen({ navigation }: Props) {
     setSubmitting(true);
 
     try {
-      const result = await loginWithPassword(trimmed, password);
-
+      const result = await loginWithPassword(digits, password);
       if (result.status === 'invalid_credentials') {
         // Deliberately vague: naming which half was wrong tells an attacker
         // which accounts exist.
@@ -67,24 +67,25 @@ export default function LoginScreen({ navigation }: Props) {
 
       const session: PendingSession = {
         userId: result.userId,
-        token: result.token,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
         role: result.role,
         phone: result.phone,
         fullName: result.fullName,
         email: result.email,
-        assignedShop: result.assignedShop,
+        shops: result.shops,
       };
 
       // An account that has not finished onboarding still owes us a profile.
       navigation.navigate(result.profileComplete ? 'Biometric' : 'Profile', {
         session,
       });
-    } catch {
-      setFormError('Could not sign you in. Check your connection and try again.');
+    } catch (caught) {
+      setFormError(describeApiError(caught));
     } finally {
       setSubmitting(false);
     }
-  }, [identifierValid, navigation, password, trimmed]);
+  }, [digits, identifierValid, navigation, password]);
 
   return (
     <Screen
@@ -120,11 +121,11 @@ export default function LoginScreen({ navigation }: Props) {
         </AppText>
 
         <AppText variant="bodySecondary" style={styles.subtitle}>
-          Use the mobile number or email registered with the franchise.
+          Use the mobile number registered with the franchise.
         </AppText>
 
         <LabeledInput
-          label="Mobile number or email"
+          label="Mobile number"
           value={identifier}
           onChangeText={next => {
             setIdentifier(next);
@@ -133,8 +134,9 @@ export default function LoginScreen({ navigation }: Props) {
             }
           }}
           error={fieldError}
-          placeholder="9876543210 or you@example.com"
-          keyboardType="email-address"
+          placeholder="9876543210"
+          keyboardType="number-pad"
+          maxLength={13}
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus

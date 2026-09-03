@@ -1,5 +1,5 @@
 import { configureHttpClient } from '../services/httpClient';
-import { logout } from './authSlice';
+import { logout, setTokens } from './authSlice';
 import { store } from './store';
 
 /**
@@ -10,8 +10,16 @@ import { store } from './store';
 export function connectHttpClientToStore() {
   configureHttpClient({
     getToken: () => store.getState().auth.token,
+    getRefreshToken: () => store.getState().auth.refreshToken,
+
+    // Only reached once a refresh has been attempted and failed, so the session
+    // really is over rather than merely stale.
     onUnauthorized: () => {
       store.dispatch(logout());
+    },
+
+    onTokensRefreshed: tokens => {
+      store.dispatch(setTokens(tokens));
     },
   });
 }

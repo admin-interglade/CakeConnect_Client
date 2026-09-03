@@ -10,6 +10,7 @@ import {
   Screen,
 } from '../../components';
 import { requestOtp } from '../../services/authApi';
+import { describeApiError } from '../../services/httpClient';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList } from '../../navigation/types';
 
@@ -40,14 +41,17 @@ export default function OtpLoginScreen({ navigation }: Props) {
     setSubmitting(true);
 
     try {
-      const { resendAfterSeconds } = await requestOtp(`${DIAL_CODE}${nationalNumber}`);
+      // The service normalises to the bare 10 digits the backend validates;
+      // the dial code stays in the UI for display only.
+      const { resendAfterSeconds } = await requestOtp(nationalNumber);
       navigation.navigate('Verification', {
         dialCode: DIAL_CODE,
         nationalNumber,
         resendAfterSeconds,
       });
-    } catch {
-      setError('Could not send the code. Check your connection and try again.');
+    } catch (caught) {
+      // Surfaces the rate limiter's own wording, and its Retry-After when sent.
+      setError(describeApiError(caught));
     } finally {
       setSubmitting(false);
     }

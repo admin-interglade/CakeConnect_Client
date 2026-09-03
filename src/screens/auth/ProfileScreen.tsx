@@ -157,17 +157,23 @@ export default function ProfileScreen({ navigation, route }: Props) {
           containerStyle={styles.field}
         />
 
-        {session.assignedShop ? (
+        {session.shops.length > 0 ? (
           <View style={styles.field}>
             <AppText variant="inputLabel" style={styles.shopLabel}>
-              Assigned franchise shop
+              {session.shops.length === 1
+                ? 'Assigned franchise shop'
+                : 'Assigned franchise shops'}
             </AppText>
-            <InfoCard
-              tone="highlight"
-              title={session.assignedShop.name}
-              subtitle={`Franchise ${session.assignedShop.code}`}
-              caption="Assigned by your network administrator. Contact support to request edits."
-            />
+            {session.shops.map(shop => (
+              <InfoCard
+                key={shop.id}
+                tone="highlight"
+                title={shop.name}
+                subtitle={`Franchise ${shop.code}`}
+                caption="Assigned by your network administrator. Contact support to request edits."
+                style={styles.shopCard}
+              />
+            ))}
           </View>
         ) : null}
       </View>
@@ -184,4 +190,5 @@ const styles = StyleSheet.create({
   photoHint: { marginTop: spacing.xxs },
   field: { marginBottom: spacing.lg },
   shopLabel: { marginBottom: spacing.sm },
+  shopCard: { marginBottom: spacing.sm },
 });
