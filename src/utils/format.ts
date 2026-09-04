@@ -8,7 +8,7 @@
  * not present on every Hermes build.
  */
 
-import type { OrderStatus, ShopStatus } from '../types/admin';
+import type { OrderStatus, ProductStatus, ShopStatus } from '../types/admin';
 
 /** Minutes east of UTC for Asia/Kolkata. */
 const IST_OFFSET_MINUTES = 330;
@@ -233,6 +233,13 @@ export const shopStatusLabels: Record<ShopStatus, string> = {
   active: 'Active',
   suspended: 'Suspended',
   inactive: 'Inactive',
+};
+
+/** FR-5 — catalogue status labels, alongside the shop and order maps above. */
+export const productStatusLabels: Record<ProductStatus, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  unavailable: 'Unavailable',
 };
 
 /** The FR-40 pipeline in order, excluding the terminal `cancelled` branch. */

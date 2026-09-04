@@ -3,11 +3,15 @@ import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import AppText from './AppText';
 import { borderRadius, borderWidth, colors, layout, spacing } from '../../constants';
-import { orderStatusLabels, shopStatusLabels } from '../../utils/format';
-import type { OrderStatus, ShopStatus } from '../../types/admin';
+import {
+  orderStatusLabels,
+  productStatusLabels,
+  shopStatusLabels,
+} from '../../utils/format';
+import type { OrderStatus, ProductStatus, ShopStatus } from '../../types/admin';
 
 /** `no_order` is FR-17's "No order placed", not a stored order status. */
-export type BadgeStatus = OrderStatus | ShopStatus | 'no_order';
+export type BadgeStatus = OrderStatus | ShopStatus | ProductStatus | 'no_order';
 
 type StatusBadgeProps = {
   status: BadgeStatus;
@@ -24,6 +28,9 @@ type Scheme = { background: string; text: string };
  * dashboard and the same badge on the orders list can never diverge.
  */
 const schemes: Record<BadgeStatus, Scheme> = {
+  // FR-5 — a product withdrawn for a date, distinct from INACTIVE.
+  unavailable: { background: colors.warningSoft, text: colors.textPrimary },
+
   // Order lifecycle (FR-40).
   draft: { background: colors.surfaceSunken, text: colors.textSecondary },
   submitted: { background: colors.primarySoft, text: colors.primaryDark },
@@ -45,6 +52,7 @@ const schemes: Record<BadgeStatus, Scheme> = {
 const labels: Record<BadgeStatus, string> = {
   ...orderStatusLabels,
   ...shopStatusLabels,
+  ...productStatusLabels,
   no_order: 'No order placed',
 };
 

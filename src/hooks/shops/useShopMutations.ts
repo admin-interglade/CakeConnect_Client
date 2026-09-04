@@ -10,7 +10,11 @@ import { describeApiError } from '../../services/api';
 import { queryKeys } from '../queryKeys';
 import { useToast } from '../../components/feedback';
 import { strings } from '../../constants';
-import type { ShopInput, ShopStatus } from '../../types/admin';
+import type {
+  LedgerAdjustmentInput,
+  ShopInput,
+  ShopStatus,
+} from '../../types/admin';
 
 /**
  * FR-2, FR-3 and FR-39 writes.
@@ -40,15 +44,31 @@ export function useShopMutations() {
     onError: error => toast.show(describeApiError(error), { tone: 'error' }),
   });
 
+  /**
+   * A shop edit fans out to up to three endpoints, so it can half-succeed. The
+   * toast names the parts that saved and the parts that did not, because
+   * "could not update shop" leaves the admin with no idea what to retry.
+   */
   const update = useMutation({
     mutationFn: ({ shopId, input }: { shopId: string; input: ShopInput }) =>
       updateShop(shopId, input),
-    onSuccess: (_data, variables) => {
+    onSuccess: (outcome, variables) => {
       invalidateShops();
       queryClient.invalidateQueries({
         queryKey: queryKeys.shops.detail(variables.shopId),
       });
-      toast.show(strings.shopDetails.updated, { tone: 'success' });
+      if (outcome.failed.length === 0) {
+        toast.show(strings.shopDetails.updated, { tone: 'success' });
+        return;
+      }
+
+      toast.show(
+        strings.shopDetails.partialSave(
+          outcome.saved.map(part => strings.shopDetails.parts[part]),
+          outcome.failed.map(entry => strings.shopDetails.parts[entry.part]),
+        ),
+        { tone: 'info' },
+      );
     },
     onError: error => toast.show(describeApiError(error), { tone: 'error' }),
   });
@@ -72,7 +92,7 @@ export function useShopMutations() {
       input,
     }: {
       shopId: string;
-      input: { amount: number; reference: string; description: string };
+      input: LedgerAdjustmentInput;
     }) => createLedgerAdjustment(shopId, input),
     onSuccess: (_data, variables) => {
       invalidateShops();
