@@ -135,6 +135,25 @@ export function formatRelativeTime(value: Date | string): string {
   return days < 7 ? `${days}d ago` : formatShortDate(then);
 }
 
+/**
+ * "morning" | "afternoon" | "evening", by the shop's own clock.
+ *
+ * Resolved in IST like every other date helper here: a greeting that reads
+ * "Good Evening" to a baker opening up at 6am because their phone is set to
+ * another timezone is a small thing that makes the app feel wrong.
+ */
+export function timeOfDay(): 'morning' | 'afternoon' | 'evening' {
+  const hour = nowInIst().getUTCHours();
+
+  if (hour < 12) {
+    return 'morning';
+  }
+  if (hour < 17) {
+    return 'afternoon';
+  }
+  return 'evening';
+}
+
 /** "12 pcs" — a quantity beside the unit the product is counted in. */
 export function formatQuantity(quantity: number, unit: string): string {
   return `${formatNumber(quantity)} ${unit}`;
@@ -169,21 +188,41 @@ export function formatCurrency(
 /**
  * Lakh/crore short form for stat tiles, where the full figure would wrap.
  * 1250000 -> "₹12.5 L". Anything under a lakh keeps its exact value.
+ *
+ * `precision` is how many decimals the short form keeps. One is enough for a
+ * headline count, but it hides up to ₹5,000 of a lakh — so a tile reporting an
+ * amount someone might reconcile against a statement asks for two, and gets
+ * "₹1.45 L" rather than "₹1.4 L". Trailing zeros are dropped either way, so
+ * two decimals never turns "₹2 L" into "₹2.00 L".
  */
-export function formatCurrencyCompact(amount: number): string {
+export function formatCurrencyCompact(
+  amount: number,
+  { precision = 1 }: { precision?: number } = {},
+): string {
   const sign = amount < 0 ? '-' : '';
   const absolute = Math.abs(amount);
 
   if (absolute >= 10_000_000) {
-    return `${sign}₹${trimZero(absolute / 10_000_000)} Cr`;
+    return `${sign}₹${trimZero(absolute / 10_000_000, precision)} Cr`;
   }
   if (absolute >= 100_000) {
-    return `${sign}₹${trimZero(absolute / 100_000)} L`;
+    return `${sign}₹${trimZero(absolute / 100_000, precision)} L`;
   }
   return formatCurrency(amount);
 }
 
-const trimZero = (value: number) => value.toFixed(1).replace(/\.0$/, '');
+/**
+ * Fixes to `precision` decimals, then drops trailing zeros and a bare point.
+ *
+ * The zero-stripping is anchored to the decimal part on purpose: a looser
+ * `/\.?0+$/` also eats zeros off the integer, turning "20" into "2" whenever
+ * `precision` is 0.
+ */
+const trimZero = (value: number, precision = 1) =>
+  value
+    .toFixed(precision)
+    .replace(/(\.\d*?)0+$/, '$1')
+    .replace(/\.$/, '');
 
 /** "12,34,567" — quantities use the same grouping, without the symbol. */
 export function formatNumber(value: number): string {

@@ -531,6 +531,434 @@ export const strings = {
     },
   },
 
+  /* ------------------------------------------------------------------------ */
+  /* Shop owner — FR-4, FR-7 to FR-12, FR-19 to FR-30, FR-34, FR-43 to FR-45   */
+  /* ------------------------------------------------------------------------ */
+
+  /** The four tabs of the shop-owner shell. */
+  shopTabs: {
+    home: 'Home',
+    orders: 'Orders',
+    ledger: 'Ledger',
+    more: 'More',
+  },
+
+  shopHome: {
+    title: 'Your shop',
+    /** Time-of-day greeting, resolved in IST so it matches the shop's clock. */
+    greetingMorning: (name: string) => `Good Morning, ${name}`,
+    greetingAfternoon: (name: string) => `Good Afternoon, ${name}`,
+    greetingEvening: (name: string) => `Good Evening, ${name}`,
+    noShop: 'No outlet assigned',
+    noShopMessage:
+      'This login is not linked to a shop yet. The franchise owner assigns one before you can order. If they just did, check again.',
+    checkAgain: 'Check again',
+    noShopName: 'Outlet name not set',
+    notifications: 'Notifications',
+    account: 'Account and settings',
+
+    /* Hero card — FR-9, FR-22 */
+    tomorrow: {
+      kicker: "TOMORROW'S ORDER",
+      /** Shown while the delivery date is still loading. */
+      dateUnknown: 'Delivery date unavailable',
+      none: 'No order started yet',
+      noneMessage:
+        'Nothing has been ordered for tomorrow. Start one before the cut-off.',
+      orderValue: 'Order value',
+      valueUnavailable: 'Not priced yet',
+      cutoffIn: (duration: string) => `Cut-off in ${duration}`,
+      cutoffPassed: 'Cut-off has passed',
+      cutoffUnavailable: 'Cut-off time unavailable',
+      placeOrder: 'Place Order',
+      continueOrder: 'Continue Order',
+      viewOrder: 'View Order',
+      closed: 'Ordering is closed for tomorrow',
+    },
+
+    /* Financial summary — FR-20 */
+    financialTitle: 'FINANCIAL SUMMARY',
+    financial: {
+      outstanding: 'Outstanding',
+      availableCredit: 'Avail. Credit',
+      paidThisMonth: 'Paid (Mo)',
+      limit: (amount: string) => `Limit ${amount}`,
+      noLimit: 'No limit set',
+      unavailable: 'Not available',
+    },
+    financialUnavailable:
+      'Your balance could not be loaded. Pull down to try again.',
+
+    /* Order track — FR-22 */
+    trackTitle: 'ORDER TRACK',
+    track: {
+      today: "Today's Order",
+      tomorrow: "Tomorrow's Order",
+      none: 'No order',
+      unavailable: 'Not available',
+      empty: 'No orders to track yet. Your first order appears here.',
+    },
+
+    /* Quick actions */
+    quickActionsTitle: 'QUICK ACTIONS',
+    actionPlaceOrder: 'Place Order',
+    actionRepeatLast: 'Repeat Last',
+    actionPayNow: 'Pay Now',
+    actionViewLedger: 'View Ledger',
+
+    /* Active offers — FR-34 */
+    offersTitle: 'ACTIVE OFFERS',
+    offersEmpty: 'No active offers right now.',
+    offersEmptyMessage:
+      'The franchise sends new offers here as they are published.',
+    offersUnavailable: 'Offers could not be loaded.',
+    viewAllOffers: 'View all offers',
+  },
+
+  shopCatalogue: {
+    title: 'Catalogue',
+    subtitle: (list: string) => `Prices from ${list}`,
+    subtitleBase: 'Prices from the standard list',
+    searchPlaceholder: 'Search cakes, pastries, supplies',
+    allCategories: 'All',
+    empty: 'No products match this search.',
+    emptyCategory: 'Nothing in this category yet.',
+    add: 'Add',
+    inCart: (quantity: string) => `${quantity} in cart`,
+    moq: (quantity: string, unit: string) => `Min ${quantity} ${unit}`,
+    pack: (size: string) => `Packs of ${size}`,
+    offerBadge: 'Offer',
+    perUnit: (unit: string) => `per ${unit}`,
+    added: (name: string) => `${name} added to the cart.`,
+    availabilityNote:
+      'A product withdrawn for tomorrow only is not flagged here — the order will say so when you submit.',
+  },
+
+  cart: {
+    title: 'Tomorrow’s order',
+    subtitle: (date: string) => `For delivery on ${date}`,
+    empty: 'Your order is empty',
+    emptyMessage:
+      'Add products from the catalogue, or repeat a previous order to start from what you usually take.',
+    browse: 'Browse the catalogue',
+
+    cutoffLabel: (time: string) => `Cut-off at ${time} IST`,
+    cutoffRemaining: (duration: string) => `${duration} left to submit`,
+    cutoffPassed: 'Cut-off has passed. Tomorrow’s order is closed.',
+    cutoffSoon: 'Cut-off is close — submit now to make tomorrow’s run.',
+
+    repeatLast: 'Repeat last order',
+    repeatWeekday: 'Repeat this weekday',
+    repeatNone: 'There is no previous order to repeat yet.',
+    repeated: (lines: number) =>
+      `${lines} ${lines === 1 ? 'line' : 'lines'} loaded from your previous order.`,
+
+    noteLabel: 'Note for this item',
+    notePlaceholder: 'e.g. eggless, no nuts',
+    orderNoteLabel: 'Note for the whole order',
+    orderNotePlaceholder: 'Anything the kitchen should know',
+    addNote: 'Add a note',
+    editNote: 'Edit note',
+
+    subtotal: 'Subtotal',
+    tax: 'Tax',
+    total: 'Order total',
+    taxNote: 'GST is applied by the franchise at invoicing.',
+    itemsCount: (lines: number, units: string) =>
+      `${lines} ${lines === 1 ? 'item' : 'items'} · ${units} units`,
+
+    saveDraft: 'Save draft',
+    draftSaved: 'Draft saved. You can keep editing until cut-off.',
+    submit: 'Submit order',
+    submitted: (orderId: string) => `Order ${orderId} submitted. The kitchen has it.`,
+    submitTitle: 'Submit tomorrow’s order?',
+    submitMessage: (value: string) =>
+      `${value} will be sent to the central kitchen. You can still edit or cancel it until the cut-off.`,
+    discard: 'Discard order',
+    discardTitle: 'Discard this order?',
+    discardMessage:
+      'The draft is deleted and nothing is sent. You can start a new one before the cut-off.',
+    discarded: 'Draft discarded.',
+
+    unsaved: 'Not yet saved to the server',
+    syncedAt: (time: string) => `Saved at ${time}`,
+    offlineNote:
+      'Your order is saved on this device. It reaches the kitchen when you submit.',
+
+    alreadySubmitted: 'Tomorrow’s order is already submitted',
+    alreadySubmittedMessage:
+      'You can view it under Orders. Cancel it there if you need to place a different one before cut-off.',
+
+    creditWarningTitle: 'Over your credit limit',
+    creditWarning: (available: string) =>
+      `This order takes you past your available credit of ${available}. The franchise allows it, but the balance is due.`,
+    creditBlockedTitle: 'Credit limit reached',
+    creditBlocked: (available: string) =>
+      `Your available credit is ${available}. Settle an invoice to place this order.`,
+    belowMoq: 'Some lines are below their minimum order quantity.',
+
+    offersNote:
+      'Offers on these items are applied by the franchise when the invoice is raised, so they are not deducted from this total.',
+  },
+
+  shopOrders: {
+    title: 'My orders',
+    subtitle: 'Everything you have ordered',
+    searchPlaceholder: 'Search by order ID',
+    empty: 'No orders match these filters.',
+    emptyAll: 'You have not placed an order yet.',
+    dateFilterUnsupported:
+      'Showing all dates. Filtering orders by a date range is not supported by the server yet.',
+    tabs: {
+      all: 'All',
+      draft: 'Draft',
+      submitted: 'Submitted',
+      accepted: 'Accepted',
+      in_production: 'In production',
+      dispatched: 'In transit',
+      delivered: 'Delivered',
+      invoiced: 'Invoiced',
+      cancelled: 'Cancelled',
+    },
+    cancel: 'Cancel order',
+    cancelTitle: 'Cancel this order?',
+    cancelMessage:
+      'The kitchen is notified that you no longer need it. This cannot be undone, and it is only possible before the cut-off.',
+    cancelled: 'Order cancelled.',
+    detailTitle: 'Order detail',
+    progress: 'Progress',
+    placedOn: 'Placed on',
+    deliveryOn: 'Delivery on',
+    submittedAt: 'Submitted at',
+    notSubmitted: 'Not submitted yet',
+    items: (count: number) => `Items (${count})`,
+    ordered: 'Ordered',
+    delivered: 'Delivered',
+    shortSupplyNote: 'Delivered short of what was ordered.',
+    viewInvoice: 'View invoice',
+    editDraft: 'Edit in the cart',
+    noTimeline:
+      'A step-by-step history with times is not recorded by the server yet, so only the current stage is shown.',
+  },
+
+  transactions: {
+    title: 'Statement',
+    subtitle: 'Orders, invoices, payments and adjustments',
+    searchPlaceholder: 'Search reference or description',
+    typeLabel: 'Type',
+    empty: 'No transactions in this range.',
+    emptyFiltered: 'No transactions match this filter.',
+    closingBalance: 'Closing balance',
+    billed: 'Billed',
+    received: 'Received',
+    outstanding: 'Outstanding',
+    pageFilterNote:
+      'Type and text filters apply to the rows on this page only — the server filters by date alone.',
+    exportUnavailable:
+      'Exporting a statement to PDF or CSV is not supported by the server yet.',
+    types: {
+      all: 'All',
+      order: 'Orders',
+      invoice: 'Invoices',
+      payment: 'Payments',
+      credit_note: 'Credit notes',
+      adjustment: 'Adjustments',
+    },
+  },
+
+  invoice: {
+    title: 'Invoice',
+    subtitle: (number: string) => `Invoice ${number}`,
+    issuedOn: 'Issued on',
+    dueOn: 'Due on',
+    status: 'Status',
+    lines: (count: number) => `Line items (${count})`,
+    quantity: 'Qty',
+    unitPrice: 'Unit price',
+    lineTotal: 'Total',
+    subtotal: 'Subtotal',
+    tax: 'Tax',
+    discount: 'Discount',
+    total: 'Invoice total',
+    paid: 'Paid',
+    outstanding: 'Outstanding',
+    basedOnDelivered:
+      'Billed on the quantity actually delivered, so any shortfall is not charged.',
+    basedOnOrdered: 'Billed on the quantity ordered.',
+    payThis: 'Pay this invoice',
+    settled: 'This invoice is settled.',
+    statuses: {
+      draft: 'Draft',
+      issued: 'Issued',
+      partially_paid: 'Partly paid',
+      paid: 'Paid',
+      overdue: 'Overdue',
+      cancelled: 'Cancelled',
+    },
+  },
+
+  payments: {
+    title: 'Payments',
+    subtitle: 'Settle your account',
+    outstandingLabel: 'Total outstanding',
+    availableCredit: 'Available credit',
+    nothingDue: 'Nothing due',
+    nothingDueMessage: 'Your account is settled. Thank you.',
+
+    payWhat: 'What are you paying?',
+    payInvoice: 'A specific invoice',
+    payOutstanding: 'The full outstanding',
+    payOnAccount: 'An amount on account',
+    amountLabel: 'Amount',
+    amountHint: 'Enter any amount up to your outstanding balance.',
+    invoiceLabel: 'Invoice',
+    noPayableInvoices: 'No invoices are awaiting payment.',
+    dueOn: (date: string) => `Due ${date}`,
+    outstandingOf: (amount: string) => `${amount} outstanding`,
+
+    methodLabel: 'How would you like to pay?',
+    methodsOnline: 'Pay now',
+    methodsOffline: 'Record a payment you have already made',
+    methods: {
+      upi: 'UPI',
+      card: 'Debit / credit card',
+      netBanking: 'Net banking',
+      cash: 'Cash',
+      cheque: 'Cheque',
+      neft: 'NEFT / bank transfer',
+    },
+    noteLabel: 'Reference or note',
+    notePlaceholder: 'e.g. cheque number, UTR',
+
+    pay: (amount: string) => `Pay ${amount}`,
+    record: (amount: string) => `Record ${amount}`,
+    confirmTitle: 'Confirm this payment?',
+    confirmMessage: (amount: string, method: string) =>
+      `${amount} by ${method}. Offline payments are checked by the franchise before they reach your ledger.`,
+
+    /** FR-30 — the offline flow, which works end to end today. */
+    recorded: 'Payment recorded. The franchise will confirm it.',
+    awaitingTitle: 'Awaiting confirmation',
+    awaitingMessage: (reference: string) =>
+      `Recorded as ${reference}. It appears on your ledger once the franchise confirms it, and you will be notified either way.`,
+
+    /** FR-28 — an online rail with no gateway wired. Stated, never faked. */
+    gatewayUnavailableTitle: 'Online payment is not connected yet',
+    gatewayUnavailableMessage: (reference: string) =>
+      `Your request was recorded as ${reference}, but no payment gateway is connected, so nothing has been charged and the amount is still due. Use cash, cheque or NEFT and record it here, or contact the franchise.`,
+    gatewayHandoff: 'Opening secure checkout...',
+
+    historyTitle: 'Payment history',
+    historyEmpty: 'No payments recorded yet.',
+    statuses: {
+      pending: 'Pending',
+      success: 'Successful',
+      failed: 'Failed',
+      pendingConfirmation: 'Awaiting confirmation',
+      rejected: 'Rejected',
+      refunded: 'Refunded',
+    },
+    errors: {
+      amount: 'Enter an amount greater than zero.',
+      overOutstanding: 'That is more than your outstanding balance.',
+      method: 'Choose how you are paying.',
+    },
+  },
+
+  offers: {
+    title: 'Offers',
+    subtitle: 'From the franchise',
+    activeTitle: 'Live now',
+    scheduledTitle: 'Coming up',
+    empty: 'No offers right now.',
+    emptyMessage: 'The franchise will send new offers here as they are published.',
+    validUntil: (date: string) => `Valid until ${date}`,
+    startsOn: (date: string) => `Starts ${date}`,
+    allProducts: 'On the whole catalogue',
+    someProducts: (count: number) =>
+      `On ${count} ${count === 1 ? 'product' : 'products'}`,
+    discount: {
+      percentage: (value: string) => `${value}% off`,
+      flat: (value: string) => `${value} off`,
+      buyXGetY: (buy: number, get: number) => `Buy ${buy}, get ${get}`,
+    },
+    /** FR-34 — the half of the requirement the backend cannot honour. */
+    notAutoApplied:
+      'Offers are applied by the franchise when your invoice is raised, so they do not change your order total here.',
+  },
+
+  notifications: {
+    title: 'Notifications',
+    empty: 'Nothing to catch up on.',
+    emptyMessage: 'Cut-off reminders, order updates and payment alerts appear here.',
+    markAllRead: 'Mark all as read',
+    allRead: 'All notifications marked as read.',
+    unread: (count: number) => `${count} unread`,
+    settingsTitle: 'What you are notified about',
+    settingsSubtitle: 'Cut-off and money alerts always stay on.',
+    cannotMute: 'Cut-off and financial alerts cannot be turned off.',
+    alwaysOn: 'Always on',
+    /** FR-43 — the delivery half that is not wired anywhere yet. */
+    pushUnavailable:
+      'These appear when you open the app. Push and SMS delivery are not connected yet.',
+    categories: {
+      cutoff: 'Cut-off',
+      order: 'Orders',
+      financial: 'Billing and payments',
+      offer: 'Offers',
+    },
+    types: {
+      cutoffReminder: 'Cut-off reminder',
+      orderSubmitted: 'Order submitted',
+      orderAccepted: 'Order accepted',
+      orderInProduction: 'Order in production',
+      orderDispatched: 'Order dispatched',
+      orderDelivered: 'Order delivered',
+      invoiceGenerated: 'Invoice generated',
+      paymentSuccess: 'Payment received',
+      paymentFailed: 'Payment failed',
+      paymentOverdue: 'Payment overdue',
+      newOffer: 'New offer',
+      creditLimitWarning: 'Credit limit reached',
+    },
+  },
+
+  /** The More tab — everything that is not the daily ordering job. */
+  shopMore: {
+    title: 'More',
+    sectionShop: 'Your shop',
+    sectionOrdering: 'Ordering',
+    sectionAccount: 'Account',
+    catalogue: 'Browse catalogue',
+    catalogueCaption: 'Products and your prices',
+    offers: 'Offers',
+    offersCaption: 'What the franchise is running',
+    notifications: 'Notifications',
+    notificationsCaption: (count: number) =>
+      count > 0 ? `${count} unread` : 'Cut-off, order and payment alerts',
+    notificationSettings: 'Notification settings',
+    payments: 'Pay a bill',
+    paymentsCaption: 'Settle an invoice or your outstanding',
+  },
+
+  shopAccount: {
+    title: 'Account',
+    profile: 'Profile',
+    signedInWith: 'Signed in with',
+    role: 'Shop owner',
+    outlets: 'Your outlets',
+    outletsSubtitle: 'Switch which outlet you are ordering for.',
+    currentOutlet: 'Currently ordering for',
+    notifications: 'Notification settings',
+    creditTitle: 'Credit',
+    creditUsed: (used: string, limit: string) => `${used} of ${limit} used`,
+    signOut: 'Sign out',
+    signOutTitle: 'Sign out?',
+    signOutMessage:
+      'Any draft order saved on this device stays on it, but you will need to sign in again to submit it.',
+    version: 'CakeConnect',
+  },
+
   placeholder: {
     comingSoon: 'Coming soon',
     body: 'This screen is part of the next admin batch.',
