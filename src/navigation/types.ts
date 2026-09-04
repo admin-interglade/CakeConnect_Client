@@ -88,6 +88,16 @@ export type AdminTabParamList = {
   DashboardTab: undefined;
   ShopsTab: undefined;
   OrdersTab: undefined;
+  /** FR-5, FR-6, FR-15 — catalogue, price lists and categories. */
+  CatalogueTab: undefined;
+};
+
+/**
+ * The catalogue is a top-level admin job rather than a detail of the
+ * dashboard, so it owns a tab and a stack of its own.
+ */
+export type AdminCatalogueStackParamList = {
+  Catalogue: undefined;
 };
 
 export type AdminDashboardStackParamList = {
@@ -96,7 +106,6 @@ export type AdminDashboardStackParamList = {
   ProductionPlan: { deliveryDate?: string } | undefined;
   ProductionDetail: { deliveryDate: string; productId: string };
   /** Batch B placeholders, routed now so dashboard quick actions never dead-end. */
-  Catalogue: undefined;
   CutoffSettings: undefined;
   Offers: undefined;
   PaymentsQueue: undefined;

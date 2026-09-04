@@ -2,6 +2,7 @@ import type {
   DateRange,
   OrderFilters,
   Pagination,
+  ProductFilters,
   ShopFilters,
 } from '../types/admin';
 
@@ -44,6 +45,25 @@ export const queryKeys = {
     ageing: ['shops', 'ageing'] as const,
     priceLists: ['shops', 'priceLists'] as const,
     regions: ['shops', 'regions'] as const,
+  },
+
+  catalogue: {
+    all: ['catalogue'] as const,
+    products: (filters: ProductFilters, pagination: Pagination) =>
+      [
+        'catalogue',
+        'products',
+        filters.search,
+        filters.status,
+        filters.categoryId,
+        pagination.page,
+        pagination.limit,
+      ] as const,
+    product: (productId: string) => ['catalogue', 'product', productId] as const,
+    categories: ['catalogue', 'categories'] as const,
+    priceLists: ['catalogue', 'priceLists'] as const,
+    priceList: (priceListId: string) =>
+      ['catalogue', 'priceList', priceListId] as const,
   },
 
   orders: {

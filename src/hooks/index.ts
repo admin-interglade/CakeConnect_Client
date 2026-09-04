@@ -5,7 +5,8 @@
  * the wrong thing leads to one hook and one API file:
  *
  *   dashboard/   -> services/api/dashboard.api.ts
- *   shops/       -> services/api/shops.api.ts, ledger.api.ts, payments.api.ts
+ *   shops/       -> services/admin/shops.api.ts, ledger.api.ts, payments.api.ts
+ *   catalogue/   -> services/admin/products.api.ts, categories.api.ts, priceLists.api.ts
  *   orders/      -> services/api/orders.api.ts
  *   production/  -> services/api/production.api.ts
  *
@@ -29,6 +30,14 @@ export {
 } from './shops/useShops';
 export { default as useShopDetails, usePriceLists } from './shops/useShopDetails';
 export { default as useShopMutations } from './shops/useShopMutations';
+
+/* Catalogue — FR-5, FR-6, FR-15 */
+export {
+  default as useCatalogue,
+  defaultProductFilters,
+  defaultCataloguePagination,
+} from './catalogue/useCatalogue';
+export { default as useCatalogueMutations } from './catalogue/useCatalogueMutations';
 
 /* Orders — FR-40, FR-17, FR-18 */
 export {

@@ -11,9 +11,11 @@ import ShopDetails from '../screens/admin/shops/ShopDetails';
 
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
+import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
 import { Icon } from '../components/ui';
 import { colors, iconSize, layout, spacing } from '../constants';
 import {
+  type AdminCatalogueStackParamList,
   type AdminDashboardStackParamList,
   type AdminOrdersStackParamList,
   type AdminShopsStackParamList,
@@ -31,6 +33,7 @@ const Tab = createBottomTabNavigator<AdminTabParamList>();
 const DashboardStackNav = createStackNavigator<AdminDashboardStackParamList>();
 const ShopsStackNav = createStackNavigator<AdminShopsStackParamList>();
 const OrdersStackNav = createStackNavigator<AdminOrdersStackParamList>();
+const CatalogueStackNav = createStackNavigator<AdminCatalogueStackParamList>();
 
 const stackOptions = {
   headerShown: false,
@@ -55,7 +58,6 @@ function DashboardStack() {
       />
 
       {/* Batch B — routed so the dashboard quick actions resolve today. */}
-      <DashboardStackNav.Screen name="Catalogue" component={ComingSoonScreen} />
       <DashboardStackNav.Screen
         name="CutoffSettings"
         component={ComingSoonScreen}
@@ -92,8 +94,16 @@ function OrdersStack() {
   );
 }
 
+function CatalogueStack() {
+  return (
+    <CatalogueStackNav.Navigator screenOptions={stackOptions}>
+      <CatalogueStackNav.Screen name="Catalogue" component={CatalogueScreen} />
+    </CatalogueStackNav.Navigator>
+  );
+}
+
 /**
- * The franchise owner's shell: three tabs, each owning its own stack so a
+ * The franchise owner's shell: four tabs, each owning its own stack so a
  * detail screen keeps the tab bar and returns to the list it was opened from.
  *
  * `ShopDetails` and `OrderDetails` are registered in both list stacks on
@@ -136,6 +146,13 @@ export default function AdminNavigator() {
         component={OrdersStack}
         options={{ title: 'Orders', tabBarAccessibilityLabel: 'Orders tab' }}
       />
+      {/* FR-5 / FR-6 — catalogue management is its own job, not a dashboard
+          detail, so it gets a tab rather than a quick action. */}
+      <Tab.Screen
+        name="CatalogueTab"
+        component={CatalogueStack}
+        options={{ title: 'Catalogue', tabBarAccessibilityLabel: 'Catalogue tab' }}
+      />
     </Tab.Navigator>
   );
 }
@@ -156,5 +173,8 @@ const tabBarIcons: Record<
   ),
   OrdersTab: ({ color }) => (
     <Icon name="clipboard-list-outline" size={iconSize.lg} color={color} />
+  ),
+  CatalogueTab: ({ color }) => (
+    <Icon name="cake-variant-outline" size={iconSize.lg} color={color} />
   ),
 };
