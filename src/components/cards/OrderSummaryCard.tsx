@@ -35,7 +35,7 @@ function OrderSummaryCard({ order, onPress }: OrderSummaryCardProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Order ${order.id}, ${order.shopName}, ${formatCurrency(
+      accessibilityLabel={`Order ${order.orderNumber}, ${order.shopName}, ${formatCurrency(
         order.total,
       )}`}
       accessibilityHint="Opens the order detail"
@@ -43,7 +43,7 @@ function OrderSummaryCard({ order, onPress }: OrderSummaryCardProps) {
     >
       <View style={styles.header}>
         <AppText variant="caption" color={colors.primary}>
-          {order.id}
+          {order.orderNumber}
         </AppText>
         <Icon name="chevron-right" size={iconSize.sm} color={colors.textMuted} />
       </View>

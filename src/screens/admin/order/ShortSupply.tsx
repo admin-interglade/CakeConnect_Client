@@ -172,7 +172,7 @@ export default function ShortSupply() {
     >
       <ScreenHeader
         title={strings.shortSupply.title}
-        subtitle={strings.shortSupply.subtitle(order.id, order.shopName)}
+        subtitle={strings.shortSupply.subtitle(order.orderNumber, order.shopName)}
         onBack={() => navigation.goBack()}
       />
 

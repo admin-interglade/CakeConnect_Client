@@ -69,7 +69,7 @@ function OrderQueueCard({
       onLongPress={onLongPress}
       disabled={disabled && !onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${order.shopName}, ${order.id}`}
+      accessibilityLabel={`${order.shopName}, ${order.orderNumber}`}
       accessibilityState={{ selected }}
       accessibilityHint={disabled ? undefined : 'Opens the order detail'}
       style={({ pressed }) => [
@@ -84,7 +84,7 @@ function OrderQueueCard({
             {order.shopName}
           </AppText>
           <AppText variant="caption" numberOfLines={1}>
-            {order.id}
+            {order.orderNumber}
           </AppText>
         </View>
 
