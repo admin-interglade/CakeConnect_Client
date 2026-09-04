@@ -78,6 +78,27 @@ type RetryConfig = InternalAxiosRequestConfig & {
   retryCount?: number;
   /** Set once a 401 on this request has already been through a refresh. */
   hasRetriedAuth?: boolean;
+  /**
+   * Set when the caller supplied its own access token rather than relying on
+   * the stored session. Such a request must not trigger a refresh or a logout:
+   * there may be no session to refresh, and dropping one that is mid-creation
+   * would sign the user out of a login they are still completing.
+   */
+  usesExplicitToken?: boolean;
+};
+
+/** Passed to the read helpers by a caller that holds a token the store does not. */
+export type RequestOptions = {
+  /**
+   * Use this access token instead of the stored one.
+   *
+   * The case this exists for: the sign-in flow has just been handed tokens by
+   * `/auth/login` or `/auth/verify-otp` but has not dispatched them to the
+   * store yet — that happens at the end of onboarding, so that
+   * `isAuthenticated` does not flip mid-flow. Any request made in between has
+   * no ambient credential to borrow.
+   */
+  authToken?: string;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -171,8 +192,12 @@ const logFailure = (error: AxiosError) => {
 };
 
 httpClient.interceptors.request.use(config => {
+  // An Authorization header already on the config was put there deliberately
+  // by the caller, and it is the more specific credential of the two. The
+  // stored session token only fills the gap when nothing was supplied —
+  // otherwise a stale or absent session would silently override a fresh token.
   const token = getToken();
-  if (token) {
+  if (token && !config.headers.has('Authorization')) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
 
@@ -253,6 +278,14 @@ httpClient.interceptors.response.use(
 
     logFailure(error);
 
+    // A request carrying its own token has no stored session behind it, so a
+    // 401 means that token was rejected — not that the session expired. Trying
+    // to refresh would fail for want of a refresh token and then log out a user
+    // who is, at that moment, in the middle of signing in.
+    if (status === 401 && config?.usesExplicitToken) {
+      return Promise.reject(error);
+    }
+
     if (status === 401 && config && !isAuthRoute(config.url)) {
       if (config.hasRetriedAuth) {
         // The replay failed too, so the new token is no better than the old one.
@@ -304,13 +337,34 @@ httpClient.interceptors.response.use(
  * inside an interceptor would mean lying to axios about its own response type,
  * so callers go through these helpers instead and receive `data` directly.
  */
+/**
+ * Turns `RequestOptions` into the axios config that carries the credential.
+ * An empty token is ignored: sending `Bearer ` is worse than sending nothing,
+ * because it suppresses the stored session that would otherwise have worked.
+ */
+function withAuth(options?: RequestOptions): AxiosRequestConfig {
+  if (!options?.authToken) {
+    return {};
+  }
+
+  return {
+    headers: { Authorization: `Bearer ${options.authToken}` },
+    // Read back off the config in the 401 handler.
+    usesExplicitToken: true,
+  } as AxiosRequestConfig;
+}
+
 async function request<T>(config: AxiosRequestConfig): Promise<T> {
   const response = await httpClient.request<ApiEnvelope<T>>(config);
   return response.data?.data as T;
 }
 
-export const apiGet = <T,>(url: string, params?: unknown): Promise<T> =>
-  request<T>({ method: 'GET', url, params });
+export const apiGet = <T,>(
+  url: string,
+  params?: unknown,
+  options?: RequestOptions,
+): Promise<T> =>
+  request<T>({ method: 'GET', url, params, ...withAuth(options) });
 
 export const apiPost = <T,>(url: string, data?: unknown): Promise<T> =>
   request<T>({ method: 'POST', url, data });
@@ -334,11 +388,13 @@ export const apiDelete = <T,>(url: string, data?: unknown): Promise<T> =>
 export async function apiGetPaged<T>(
   url: string,
   params?: unknown,
+  options?: RequestOptions,
 ): Promise<Paginated<T>> {
   const response = await httpClient.request<ApiEnvelope<T[]>>({
     method: 'GET',
     url,
     params,
+    ...withAuth(options),
   });
 
   const items = response.data?.data ?? [];
