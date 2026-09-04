@@ -78,6 +78,13 @@ export type Shop = {
   createdAt: string;
 };
 
+/**
+ * FR-6 / PRD section 8 — whether exceeding the credit limit warns the shop or
+ * blocks the order. The backend settles the PRD's open question by making it a
+ * per-shop setting rather than a network-wide rule.
+ */
+export type CreditBehavior = 'warn' | 'blockOrder';
+
 /** The write shape for FR-2 create and edit. */
 export type ShopInput = {
   name: string;
@@ -85,12 +92,56 @@ export type ShopInput = {
   ownerName: string;
   ownerPhone: string;
   ownerEmail?: string;
+  /** The shop's own line, which `POST /shops` requires separately. */
+  mobileNumber: string;
+  /** Street line only; the city/state/pincode are stored separately. */
   address: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   gstin?: string;
+  /**
+   * No backend field maps to this — see docs/api-gaps.md G6. Retained so the
+   * type does not change shape for existing callers, but never sent.
+   */
   region?: string;
   creditLimit: number;
+  creditBehavior?: CreditBehavior;
   priceListId: string;
 };
+
+/** Which parts of an FR-2 edit reached the server; see `updateShop`. */
+export type ShopUpdatePart = 'details' | 'creditLimit' | 'priceList';
+
+/**
+ * A shop edit fans out to up to three endpoints, so it can half-succeed. The
+ * caller is told exactly which parts landed rather than a single pass/fail,
+ * because otherwise an admin cannot know what to retry.
+ */
+export type ShopUpdateOutcome = {
+  shop: Shop;
+  saved: ShopUpdatePart[];
+  failed: { part: ShopUpdatePart; message: string }[];
+};
+
+/** FR-39 — an adjustment moves the balance; a credit note reduces it. */
+export type LedgerAdjustmentInput =
+  | {
+      kind: 'adjustment';
+      amount: number;
+      /** DEBIT increases what the shop owes; CREDIT reduces it. */
+      direction: 'debit' | 'credit';
+      reference: string;
+      description: string;
+    }
+  | {
+      kind: 'creditNote';
+      /** Always positive; a credit note only ever reduces the balance. */
+      amount: number;
+      reason: string;
+      reference: string;
+      invoiceId?: string;
+    };
 
 /**
  * FR-5, FR-7 — `deliveredQty` is what the kitchen commits to sending: it is
@@ -258,6 +309,21 @@ export type ProductionDetail = {
   shops: ProductionShopLine[];
 };
 
+/** FR-40 — the fulfilment record that carries delivered quantities. */
+export type DeliveryStatus =
+  | 'pending'
+  | 'in_transit'
+  | 'delivered'
+  | 'partially_delivered'
+  | 'failed';
+
+export type Delivery = {
+  id: string;
+  orderId: string;
+  deliveryDate: string;
+  status: DeliveryStatus;
+};
+
 /** FR-38 — outstanding split into the PRD's three ageing buckets. */
 export type AgeingBucket = {
   label: '0-30' | '31-60' | '60+';
@@ -291,6 +357,104 @@ export type AuditEntry = {
 export type PriceList = {
   id: string;
   name: string;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Catalogue — FR-5, FR-6, FR-15                                               */
+/* -------------------------------------------------------------------------- */
+
+/** FR-5 — a product can be withdrawn (INACTIVE) or temporarily unavailable. */
+export type ProductStatus = 'active' | 'inactive' | 'unavailable';
+
+/**
+ * FR-15 — a catalogue category. Distinct from `ProductCategory`, which is the
+ * production plan's fixed set of kitchen sections; these are uuid-keyed rows
+ * the admin creates. See docs/api-gaps.md G8.
+ */
+export type Category = {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  /** FR-15 — lead time for this category, where longer than one day. */
+  leadTimeHours: number;
+  /** How many products reference it; the guard before deleting. */
+  productCount: number;
+};
+
+export type CategoryInput = {
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  leadTimeHours: number;
+  isActive?: boolean;
+};
+
+/** FR-5 — name, category, image, unit, base price, MOQ and pack size. */
+export type Product = {
+  id: string;
+  name: string;
+  sku: string;
+  categoryId: string;
+  categoryName?: string;
+  description?: string;
+  imageUrl?: string;
+  unit: string;
+  basePrice: number;
+  /** The backend calls this `minimumOrderQuantity`. */
+  moq: number;
+  packSize: number;
+  status: ProductStatus;
+};
+
+export type ProductInput = {
+  name: string;
+  sku: string;
+  categoryId: string;
+  description?: string;
+  imageUrl?: string;
+  unit: string;
+  basePrice: number;
+  moq: number;
+  packSize: number;
+  status?: ProductStatus;
+};
+
+export type ProductFilters = {
+  search: string;
+  status: ProductStatus | 'all';
+  categoryId: string | 'all';
+};
+
+/** FR-5 — a product marked available or not for one delivery date. */
+export type ProductAvailabilityInput = {
+  date: string;
+  available: boolean;
+  note?: string;
+};
+
+/** FR-6 — one product's price on a list. */
+export type PriceListItem = {
+  id: string;
+  productId: string;
+  productName: string;
+  unit: string;
+  price: number;
+};
+
+/** FR-6 — the full record, as opposed to the `{id, name}` dropdown shape. */
+export type PriceListDetail = PriceList & {
+  region?: string;
+  description?: string;
+  isActive: boolean;
+  items: PriceListItem[];
+};
+
+export type PriceListInput = {
+  name: string;
+  region?: string;
+  description?: string;
 };
 
 /**

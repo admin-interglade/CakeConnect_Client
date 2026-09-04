@@ -5,11 +5,20 @@ import type {
   ShopFilters,
   ShopInput,
   ShopStatus,
+  ShopUpdateOutcome,
+  ShopUpdatePart,
 } from '../../types/admin';
-import { creditUtilisation, toApiDate } from '../../utils/format';
-import { apiGet, apiGetPaged } from '../api';
-import { NotImplementedOnServer, shopStatusCodec, toShop, type ApiShop } from '../mappers';
-import { priceLists, recordAudit, shops as mockShops } from './mockStore';
+import { creditUtilisation } from '../../utils/format';
+import { apiGet, apiGetPaged, apiPatch, apiPost, describeApiError } from '../api';
+import {
+  NotImplementedOnServer,
+  creditBehaviorCodec,
+  shopStatusCodec,
+  toApiShopCreate,
+  toApiShopDetails,
+  toShop,
+  type ApiShop,
+} from '../mappers';
 
 /**
  * Shops — FR-2, FR-3, FR-38, FR-39.
@@ -92,75 +101,91 @@ export async function getRegions(): Promise<string[]> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Writes — MOCK-BACKED. See the banner in `api/index.ts`.                     */
+/* Writes                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * FR-2 — create the shop. `POST /shops` accepts creditLimit and priceListId
+ * inline, unlike the update route, so a create is a single call.
+ *
+ * The owner is linked by `ownerMobileNumber`; nothing sends them an invite, so
+ * `inviteSentAt` stays unset rather than claiming a message went out. See
+ * docs/api-gaps.md backend gap 1.
+ */
 export async function createShop(input: ShopInput): Promise<Shop> {
-  const shop: Shop = {
-    ...input,
-    id: `shop_${Date.now()}`,
-    status: 'active',
-    creditUsed: 0,
-    creditAvailable: input.creditLimit,
-    priceListName: priceLists.find(list => list.id === input.priceListId)?.name ?? '',
-    outstanding: 0,
-    paidToDate: 0,
-    todaysOrderStatus: 'no_order',
-    inviteSentAt: new Date().toISOString(),
-    createdAt: toApiDate(new Date()),
-  };
-
-  mockShops.unshift(shop);
-  recordAudit(shop.id, { action: 'Shop created', after: shop.name });
-
-  return shop;
+  return toShop(await apiPost<ApiShop>('/shops', toApiShopCreate(input)));
 }
 
-export async function updateShop(shopId: string, input: ShopInput): Promise<Shop> {
-  const index = mockShops.findIndex(shop => shop.id === shopId);
-  if (index === -1) {
-    throw new Error('Shop not found');
-  }
+/**
+ * FR-2 — edit the shop. This fans out, because `PATCH /shops/:id` silently
+ * ignores creditLimit and priceListId:
+ *
+ *   PATCH /shops/:id                    descriptive fields
+ *   PATCH /shops/:id/credit-limit       creditLimit + creditBehavior
+ *   POST  /shops/:id/assign-price-list  priceListId
+ *
+ * They run in sequence and each is recorded, so a half-succeeding save reports
+ * exactly which parts landed. Throws only when nothing at all was saved; a
+ * partial success is returned rather than raised, because the admin needs to
+ * see what to retry rather than being told the whole edit failed.
+ */
+export async function updateShop(
+  shopId: string,
+  input: ShopInput,
+): Promise<ShopUpdateOutcome> {
+  const saved: ShopUpdatePart[] = [];
+  const failed: ShopUpdateOutcome['failed'] = [];
 
-  const previous = mockShops[index];
-  const updated: Shop = {
-    ...previous,
-    ...input,
-    priceListName: priceLists.find(list => list.id === input.priceListId)?.name ?? '',
-    creditAvailable: Math.max(input.creditLimit - previous.creditUsed, 0),
-  };
-
-  mockShops[index] = updated;
-
-  (Object.keys(input) as (keyof ShopInput)[]).forEach(field => {
-    if (String(previous[field] ?? '') !== String(input[field] ?? '')) {
-      recordAudit(shopId, {
-        action: 'Shop updated',
-        field,
-        before: String(previous[field] ?? ''),
-        after: String(input[field] ?? ''),
-      });
+  const attempt = async (part: ShopUpdatePart, run: () => Promise<unknown>) => {
+    try {
+      await run();
+      saved.push(part);
+    } catch (error) {
+      failed.push({ part, message: describeApiError(error) });
     }
-  });
+  };
 
-  return updated;
-}
+  await attempt('details', () =>
+    apiPatch<ApiShop>(`/shops/${shopId}`, toApiShopDetails(input)),
+  );
 
-export async function setShopStatus(shopId: string, status: ShopStatus): Promise<Shop> {
-  const index = mockShops.findIndex(shop => shop.id === shopId);
-  if (index === -1) {
-    throw new Error('Shop not found');
+  await attempt('creditLimit', () =>
+    apiPatch<ApiShop>(`/shops/${shopId}/credit-limit`, {
+      creditLimit: input.creditLimit,
+      ...(input.creditBehavior
+        ? { creditBehavior: creditBehaviorCodec.toApi(input.creditBehavior) }
+        : {}),
+    }),
+  );
+
+  if (input.priceListId) {
+    await attempt('priceList', () =>
+      apiPost(`/shops/${shopId}/assign-price-list`, {
+        priceListId: input.priceListId,
+      }),
+    );
   }
 
-  const previous = mockShops[index].status;
-  mockShops[index] = { ...mockShops[index], status };
+  if (saved.length === 0) {
+    throw new Error(failed[0]?.message ?? 'The shop could not be updated.');
+  }
 
-  recordAudit(shopId, {
-    action: 'Shop status changed',
-    field: 'status',
-    before: previous,
-    after: status,
+  // Re-read rather than patching locally: the server owns availableCredit and
+  // the price-list association, and only it knows what actually persisted.
+  return { shop: await getShop(shopId), saved, failed };
+}
+
+/**
+ * FR-3 — activate, suspend or deactivate.
+ *
+ * The status route answers with a thin projection — id, code, name, status —
+ * so mapping its response straight to a Shop would blank the owner, address and
+ * credit fields on the detail screen. The full record is re-read instead.
+ */
+export async function setShopStatus(shopId: string, status: ShopStatus): Promise<Shop> {
+  await apiPatch(`/shops/${shopId}/status`, {
+    status: shopStatusCodec.toApi(status),
   });
 
-  return mockShops[index];
+  return getShop(shopId);
 }

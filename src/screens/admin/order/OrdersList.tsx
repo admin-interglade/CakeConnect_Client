@@ -61,7 +61,6 @@ import type { AdminOrdersStackParamList } from '../../../navigation/types';
 import type {
   Order,
   OrderFilters,
-  OrderStatus,
   OrderStatusCounts,
   Pagination as PaginationState,
 } from '../../../types/admin';
@@ -89,21 +88,6 @@ const queueTabs: { key: OrderFilters['status']; label: string }[] = [
 const dateFieldOptions: DropdownOption<OrderFilters['dateField']>[] = [
   { value: 'orderDate', label: strings.orders.orderDate },
   { value: 'deliveryDate', label: strings.orders.deliveryDate },
-];
-
-/** The three bulk transitions the queue supports, and what they move orders to. */
-const bulkActions: {
-  label: string;
-  status: OrderStatus;
-  destructive: boolean;
-}[] = [
-  { label: strings.orders.bulkAccept, status: 'accepted', destructive: false },
-  {
-    label: strings.orders.bulkProduction,
-    status: 'in_production',
-    destructive: false,
-  },
-  { label: strings.orders.bulkCancel, status: 'cancelled', destructive: true },
 ];
 
 /**
@@ -134,9 +118,6 @@ export default function OrdersList() {
   const [filterSheetOpen, setFilterSheetOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<FilterDraft>(() => toDraft(filters));
   const [selected, setSelected] = React.useState<string[]>([]);
-  const [pendingBulk, setPendingBulk] = React.useState<
-    (typeof bulkActions)[number] | null
-  >(null);
   const [timelineOrder, setTimelineOrder] = React.useState<Order | null>(null);
   const [quickActionId, setQuickActionId] = React.useState<string | null>(null);
 
@@ -154,7 +135,9 @@ export default function OrdersList() {
     refetch,
   } = useOrders(filters, pagination);
 
-  const { updateStatus, bulkUpdateStatus, exportList } = useOrderMutations();
+  // `bulkUpdateStatus` is deliberately not used: there is no bulk endpoint,
+  // so the queue moves orders one at a time. See docs/api-gaps.md G13.
+  const { updateStatus, exportList } = useOrderMutations();
 
   const isPendingView = filters.status === 'pending_cutoff';
   const selectionMode = selected.length > 0;
@@ -208,19 +191,6 @@ export default function OrdersList() {
     updateStatus.mutate(
       { orderId: order.id, status: 'accepted' },
       { onSettled: () => setQuickActionId(null) },
-    );
-  };
-
-  const applyBulk = () => {
-    if (!pendingBulk) {
-      return;
-    }
-    bulkUpdateStatus.mutate(
-      { orderIds: selected, status: pendingBulk.status },
-      {
-        onSuccess: () => setSelected([]),
-        onSettled: () => setPendingBulk(null),
-      },
     );
   };
 
@@ -384,16 +354,17 @@ export default function OrdersList() {
 
         {selectionMode ? (
           <SectionCard title={strings.common.selectedCount(selected.length)}>
+            {/*
+              FR-40 — there is no bulk endpoint. A client-side loop would move
+              some orders and leave the rest, which is precisely the half-moved
+              queue this control was meant to prevent, so the actions are
+              withheld and the reason given. See docs/api-gaps.md G13.
+            */}
+            <InlineMessage tone="info" icon="information-outline">
+              {strings.orders.bulkUnavailable}
+            </InlineMessage>
+
             <View style={styles.bulkActions}>
-              {bulkActions.map(action => (
-                <AppButton
-                  key={action.status}
-                  label={action.label}
-                  onPress={() => setPendingBulk(action)}
-                  variant="outline"
-                  style={styles.bulkButton}
-                />
-              ))}
               <AppButton
                 label={strings.common.cancel}
                 variant="link"
@@ -517,22 +488,6 @@ export default function OrdersList() {
           />
         </View>
       </FilterSheet>
-
-      <ConfirmDialog
-        visible={pendingBulk !== null}
-        title={strings.orders.bulkTitle(
-          pendingBulk?.label ?? '',
-          selected.length,
-        )}
-        message={strings.orders.bulkMessage(
-          pendingBulk?.label ?? '',
-          selected.length,
-        )}
-        destructive={pendingBulk?.destructive}
-        loading={bulkUpdateStatus.isPending}
-        onConfirm={applyBulk}
-        onDismiss={() => setPendingBulk(null)}
-      />
 
       {/* FR-40 — the timeline behind a status badge, actor and time included. */}
       <ConfirmDialog

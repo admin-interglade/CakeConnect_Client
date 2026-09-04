@@ -37,15 +37,13 @@ export function useOrderMutations() {
   };
 
   const updateStatus = useMutation({
-    mutationFn: ({
-      orderId,
-      status,
-      payload,
-    }: {
-      orderId: string;
-      status: OrderStatus;
-      payload?: { deliveredQty?: Record<string, number> };
-    }) => updateOrderStatus(orderId, status, payload),
+    /**
+     * The status route takes only `{status}`. Delivered quantities live on the
+     * delivery, so a Delivered transition carrying a shortfall goes through
+     * `shortSupply` below instead of being smuggled into this call.
+     */
+    mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
+      updateOrderStatus(orderId, status),
 
     onMutate: async variables => {
       const key = queryKeys.orders.detail(variables.orderId);

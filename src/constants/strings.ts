@@ -17,6 +17,8 @@ export const strings = {
     close: 'Close',
     confirm: 'Confirm',
     edit: 'Edit',
+    delete: 'Delete',
+    deactivate: 'Deactivate',
     view: 'View',
     back: 'Back',
     export: 'Export',
@@ -197,7 +199,11 @@ export const strings = {
       ownerName: 'Owner name',
       ownerPhone: 'Owner phone',
       ownerEmail: 'Owner email',
-      address: 'Address',
+      address: 'Street address',
+      mobileNumber: 'Shop mobile number',
+      city: 'City',
+      state: 'State',
+      pincode: 'Pincode',
       gstin: 'GSTIN',
       region: 'Region',
       creditLimit: 'Credit limit',
@@ -206,11 +212,30 @@ export const strings = {
       reference: 'Reference',
       description: 'Description',
     },
+    /** FR-2 — a shop edit spans three endpoints and can half-succeed. */
+    parts: {
+      details: 'Details',
+      creditLimit: 'Credit limit',
+      priceList: 'Price list',
+    } as Record<string, string>,
+    partialSave: (saved: string[], failed: string[]) =>
+      `${saved.join(' and ')} saved. ${failed.join(' and ')} could not be saved - try again.`,
+    adjustmentKind: 'Entry type',
+    adjustmentKindAdjustment: 'Adjustment',
+    adjustmentKindCreditNote: 'Credit note',
+    adjustmentDirection: 'Direction',
+    adjustmentDirectionDebit: 'Debit - increases what the shop owes',
+    adjustmentDirectionCredit: 'Credit - reduces what the shop owes',
+    adjustmentReason: 'Reason',
+    creditBehavior: 'When the limit is exceeded',
+    creditBehaviorWarn: 'Warn the shop',
+    creditBehaviorBlock: 'Block new orders',
     errors: {
       required: 'This field is required.',
       phone: 'Enter a 10-digit mobile number.',
       email: 'Enter a valid email address.',
       gstin: 'Enter a valid 15-character GSTIN.',
+      reasonRequired: 'A credit note needs a reason.',
       creditLimit: 'Enter a credit limit of zero or more.',
       amount: 'Enter a non-zero amount.',
     },
@@ -251,6 +276,8 @@ export const strings = {
     bulkTitle: (action: string, count: number) => `${action} ${count} orders?`,
     bulkMessage: (action: string, count: number) =>
       `This applies "${action}" to ${count} orders and records each change in the audit trail.`,
+    bulkUnavailable:
+      'Bulk status changes are not supported by the server yet. Move orders one at a time so none is left half-moved.',
     bulkDone: (count: number) => `${count} orders updated.`,
     bulkFailed: 'Bulk update failed. No orders were changed.',
     exportStarted: (format: string) => `Export queued as ${format.toUpperCase()}.`,
@@ -283,6 +310,8 @@ export const strings = {
     cutoffAt: 'Cut-off',
     afterCutoff: 'Submitted after cut-off',
     reopened: 'Reopened by admin',
+    reopenUnavailable:
+      'Reopening an order after cut-off is not supported by the server yet. The exception has to be audit-logged server-side.',
     reopenAction: 'Reopen after cut-off',
     reopenTitle: 'Reopen this order?',
     reopenMessage:
@@ -376,6 +405,130 @@ export const strings = {
     noNote: 'No special notes',
     empty: 'No shop has ordered this item for this date.',
     unitSuffix: (quantity: string, unit: string) => `${quantity} ${unit}`,
+  },
+
+  /** FR-5, FR-6, FR-15 — catalogue, price lists and categories. */
+  catalogue: {
+    title: 'Catalogue & price lists',
+    subtitle: 'Products, categories and the prices each shop pays.',
+    tabs: {
+      products: 'Products',
+      categories: 'Categories',
+      priceLists: 'Price lists',
+    },
+
+    searchPlaceholder: 'Search by name or SKU',
+    statusLabel: 'Status',
+    categoryLabel: 'Category',
+    addProduct: 'Add product',
+    addCategory: 'Add category',
+    addPriceList: 'Add price list',
+
+    columns: {
+      product: 'Product',
+      sku: 'SKU',
+      category: 'Category',
+      price: 'Base price',
+      unit: 'Unit',
+      moq: 'MOQ',
+      packSize: 'Pack size',
+      status: 'Status',
+    },
+
+    productCount: (count: number) =>
+      `${count} product${count === 1 ? '' : 's'}`,
+    leadTime: (hours: number) =>
+      hours > 0 ? `${hours}h lead time` : 'Next-day delivery',
+    itemCount: (count: number) => `${count} priced item${count === 1 ? '' : 's'}`,
+
+    emptyProducts: 'No products match these filters.',
+    emptyCategories: 'No categories yet. Add one before creating products.',
+    emptyPriceLists: 'No price lists yet.',
+
+    productCreated: 'Product added.',
+    productUpdated: 'Product updated.',
+    productDeleted: 'Product deactivated.',
+    categoryCreated: 'Category added.',
+    categoryUpdated: 'Category updated.',
+    categoryDeleted: 'Category deactivated.',
+    priceListCreated: 'Price list created.',
+    priceListUpdated: 'Price list updated.',
+    priceListDeleted: 'Price list deactivated.',
+    itemsAdded: 'Prices added to the list.',
+    itemUpdated: 'Price updated.',
+    itemRemoved: 'Product removed from the list.',
+    priceListAssigned: 'Price list assigned to the shop.',
+    availabilitySaved: 'Availability saved for that date.',
+    availabilityCleared: 'Availability override removed.',
+
+    productTitle: 'Add product',
+    productEditTitle: 'Edit product',
+    categoryTitle: 'Add category',
+    categoryEditTitle: 'Edit category',
+    priceListTitle: 'New price list',
+    priceListEditTitle: 'Edit price list',
+    availabilityTitle: 'Set availability',
+    itemPriceTitle: 'Update price',
+
+    /*
+     * The API's delete is a soft delete: the row stays and is flagged inactive
+     * (verified live — see docs/api-gaps.md G14). The copy says "deactivate"
+     * because "delete" would promise something that does not happen.
+     */
+    deleteProductTitle: 'Deactivate this product?',
+    deleteProductMessage: (name: string) =>
+      `${name} will be marked inactive and hidden from new orders. It stays in the catalogue, and orders that already reference it keep their snapshot price.`,
+    deleteCategoryTitle: 'Deactivate this category?',
+    deleteCategoryMessage: (name: string) =>
+      `${name} will be marked inactive. It stays in the list and can be reactivated.`,
+    /** FR-15 — a category with products cannot be safely removed. */
+    categoryInUse: (count: number) =>
+      `This category still holds ${count} product${
+        count === 1 ? '' : 's'
+      }. Move or delete them first.`,
+    deletePriceListTitle: 'Deactivate this price list?',
+    deletePriceListMessage: (name: string) =>
+      `${name} will be marked inactive. Shops assigned to it fall back to base prices.`,
+
+    /**
+     * FR-5 — availability can be written but never read back, so the screen
+     * cannot show which dates are already set. Saying so beats an empty
+     * calendar, which would read as "available every day".
+     */
+    availabilityWriteOnly:
+      'Availability can be set for a date, but the server does not report existing overrides yet, so this list cannot show them.',
+    /** FR-6 — regions exist on a price list but no shop carries one. */
+    regionUnsupported:
+      'Region targeting is stored but cannot be applied: shops have no region field yet.',
+
+    fields: {
+      name: 'Name',
+      sku: 'SKU',
+      category: 'Category',
+      description: 'Description',
+      imageUrl: 'Image URL',
+      unit: 'Unit',
+      basePrice: 'Base price',
+      moq: 'Minimum order quantity',
+      packSize: 'Pack size',
+      status: 'Status',
+      leadTimeHours: 'Lead time (hours)',
+      region: 'Region',
+      price: 'Price',
+      date: 'Date',
+      available: 'Available',
+      shop: 'Shop',
+    },
+
+    errors: {
+      name: 'Enter a name.',
+      sku: 'Enter a SKU.',
+      category: 'Choose a category.',
+      price: 'Enter a price of zero or more.',
+      quantity: 'Enter a whole number of one or more.',
+      leadTime: 'Enter a whole number of hours, or zero.',
+      date: 'Enter a date as YYYY-MM-DD.',
+    },
   },
 
   placeholder: {

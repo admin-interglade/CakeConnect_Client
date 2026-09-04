@@ -57,6 +57,7 @@ import type { AdminShopsStackParamList } from '../../../navigation/types';
 import type {
   AuditEntry,
   DateRange,
+  LedgerAdjustmentInput,
   LedgerEntry,
   ShopInput,
   ShopStatus,
@@ -140,11 +141,21 @@ export default function ShopDetails() {
       },
       { name: 'ownerEmail', label: strings.shopDetails.fields.ownerEmail, type: 'email' },
       {
+        // POST /shops requires the shop's own line, separately from the owner's.
+        name: 'mobileNumber',
+        label: strings.shopDetails.fields.mobileNumber,
+        type: 'tel',
+        required: true,
+      },
+      {
         name: 'address',
         label: strings.shopDetails.fields.address,
         type: 'textarea',
         required: true,
       },
+      { name: 'city', label: strings.shopDetails.fields.city, type: 'text' },
+      { name: 'state', label: strings.shopDetails.fields.state, type: 'text' },
+      { name: 'pincode', label: strings.shopDetails.fields.pincode, type: 'text' },
       {
         name: 'gstin',
         label: strings.shopDetails.fields.gstin,
@@ -158,7 +169,6 @@ export default function ShopDetails() {
             ? undefined
             : strings.shopDetails.errors.gstin,
       },
-      { name: 'region', label: strings.shopDetails.fields.region, type: 'text' },
       {
         name: 'creditLimit',
         label: strings.shopDetails.fields.creditLimit,
@@ -185,9 +195,12 @@ export default function ShopDetails() {
       ownerName: shop?.ownerName ?? '',
       ownerPhone: shop?.ownerPhone ?? '',
       ownerEmail: shop?.ownerEmail ?? '',
+      mobileNumber: shop?.ownerPhone ?? '',
       address: shop?.address ?? '',
+      city: shop?.region ?? '',
+      state: '',
+      pincode: '',
       gstin: shop?.gstin ?? '',
-      region: shop?.region ?? '',
       creditLimit: shop ? String(shop.creditLimit) : '',
       priceListId: shop?.priceListId ?? priceLists[0]?.id ?? '',
     }),
@@ -200,10 +213,14 @@ export default function ShopDetails() {
     ownerName: values.ownerName.trim(),
     ownerPhone: values.ownerPhone.replace(/\D/g, ''),
     ownerEmail: values.ownerEmail.trim() || undefined,
+    mobileNumber: values.mobileNumber.replace(/\D/g, ''),
     address: values.address.trim(),
+    city: values.city.trim() || undefined,
+    state: values.state.trim() || undefined,
+    pincode: values.pincode.trim() || undefined,
     gstin: values.gstin.trim().toUpperCase() || undefined,
-    region: values.region.trim() || undefined,
     creditLimit: Number(values.creditLimit),
+    creditBehavior: values.creditBehavior === 'blockOrder' ? 'blockOrder' : 'warn',
     priceListId: values.priceListId,
   });
 
@@ -242,21 +259,37 @@ export default function ShopDetails() {
     );
   };
 
-  /** FR-39 — a manual adjustment or, when negative, a credit note. */
+  /**
+   * FR-39 — an adjustment and a credit note are different endpoints with
+   * different rules, so the admin states which they mean. The sign of the
+   * amount no longer decides it: a negative adjustment used to become a credit
+   * note silently, losing the required reason.
+   */
   const submitAdjustment = (values: FormValues) => {
     if (!shopId) {
       return;
     }
 
+    const amount = Math.abs(Number(values.amount));
+
+    const input: LedgerAdjustmentInput =
+      values.kind === 'creditNote'
+        ? {
+            kind: 'creditNote',
+            amount,
+            reason: values.reason.trim(),
+            reference: values.reference.trim(),
+          }
+        : {
+            kind: 'adjustment',
+            amount,
+            direction: values.direction === 'credit' ? 'credit' : 'debit',
+            reference: values.reference.trim(),
+            description: values.description.trim(),
+          };
+
     addAdjustment.mutate(
-      {
-        shopId,
-        input: {
-          amount: Number(values.amount),
-          reference: values.reference.trim(),
-          description: values.description.trim(),
-        },
-      },
+      { shopId, input },
       { onSuccess: () => setAdjustmentOpen(false) },
     );
   };
@@ -687,7 +720,10 @@ export default function ShopDetails() {
         visible={creditOpen}
         title={strings.shopDetails.adjustCreditTitle}
         fields={creditLimitFields}
-        initialValues={{ creditLimit: String(shop.creditLimit) }}
+        initialValues={{
+          creditLimit: String(shop.creditLimit),
+          creditBehavior: 'warn',
+        }}
         submitLabel={strings.common.save}
         submitting={update.isPending}
         onSubmit={submitCreditLimit}
@@ -698,7 +734,14 @@ export default function ShopDetails() {
         visible={adjustmentOpen}
         title={strings.shopDetails.adjustmentTitle}
         fields={adjustmentFields}
-        initialValues={{ amount: '', reference: '', description: '' }}
+        initialValues={{
+          kind: 'adjustment',
+          direction: 'debit',
+          reason: '',
+          amount: '',
+          reference: '',
+          description: '',
+        }}
         submitLabel={strings.common.save}
         submitting={addAdjustment.isPending}
         onSubmit={submitAdjustment}
@@ -874,6 +917,21 @@ function groupByMonth(entries: LedgerEntry[]) {
 
 const creditLimitFields: FormField[] = [
   {
+    /**
+     * PRD section 8 asked whether exceeding the limit blocks or warns. The
+     * backend answers "per shop", so the admin chooses rather than inheriting
+     * whatever the server defaults to.
+     */
+    name: 'creditBehavior',
+    label: strings.shopDetails.creditBehavior,
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'warn', label: strings.shopDetails.creditBehaviorWarn },
+      { value: 'blockOrder', label: strings.shopDetails.creditBehaviorBlock },
+    ],
+  },
+  {
     name: 'creditLimit',
     label: strings.shopDetails.fields.creditLimit,
     type: 'number',
@@ -885,6 +943,37 @@ const creditLimitFields: FormField[] = [
 ];
 
 const adjustmentFields: FormField[] = [
+  {
+    // FR-39 — stated, not inferred from the sign of the amount.
+    name: 'kind',
+    label: strings.shopDetails.adjustmentKind,
+    type: 'select',
+    required: true,
+    options: [
+      { value: 'adjustment', label: strings.shopDetails.adjustmentKindAdjustment },
+      { value: 'creditNote', label: strings.shopDetails.adjustmentKindCreditNote },
+    ],
+  },
+  {
+    name: 'direction',
+    label: strings.shopDetails.adjustmentDirection,
+    type: 'select',
+    options: [
+      { value: 'debit', label: strings.shopDetails.adjustmentDirectionDebit },
+      { value: 'credit', label: strings.shopDetails.adjustmentDirectionCredit },
+    ],
+    hint: 'Ignored for a credit note, which always reduces the balance.',
+  },
+  {
+    name: 'reason',
+    label: strings.shopDetails.adjustmentReason,
+    type: 'text',
+    // Required by POST /ledger/credit-notes; unused for an adjustment.
+    validate: (value, values) =>
+      values.kind === 'creditNote' && !value.trim()
+        ? strings.shopDetails.errors.reasonRequired
+        : undefined,
+  },
   {
     name: 'amount',
     label: strings.shopDetails.fields.amount,

@@ -1,5 +1,6 @@
 import type {
   AuditEntry,
+  Delivery,
   DashboardStats,
   LedgerEntry,
   Order,
@@ -8,10 +9,16 @@ import type {
   Payment,
   PriceList,
   Shop,
+  ShopInput,
   TaxLine,
   TopProductPoint,
 } from '../../types/admin';
-import { orderStatusCodec, shopStatusCodec } from './enums';
+import {
+  creditBehaviorCodec,
+  deliveryStatusCodec,
+  orderStatusCodec,
+  shopStatusCodec,
+} from './enums';
 
 /**
  * Wire shapes and mappers for the admin surface.
@@ -21,11 +28,11 @@ import { orderStatusCodec, shopStatusCodec } from './enums';
  *     numeric goes through `num()` rather than being trusted as a number;
  *   - names are prefixed (`shopName`, `shopCode`), which the domain drops.
  *
- * VERIFICATION STATUS: the shop, price-list, audit-log and dashboard shapes
- * below were captured from a live server. The order, ledger and payment shapes
- * were NOT — those tables were empty on the dev database, so they follow
- * `docs/api-endpoints.md` and are marked UNVERIFIED. Re-check them against real
- * rows before trusting the order queue.
+ * VERIFICATION STATUS: the shop, price-list, audit-log, dashboard and ledger
+ * shapes below were captured from a live server. The order, payment and
+ * delivery shapes were NOT — those tables are still empty on the dev database,
+ * so they follow `docs/api-endpoints.md` and are marked UNVERIFIED. Re-check
+ * them against real rows before trusting the order queue.
  */
 
 /** Money and counts come back as strings from the API's decimal columns. */
@@ -117,6 +124,69 @@ export function toShop(api: ApiShop): Shop {
     createdAt: toApiDateOnly(api.createdAt),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Shop write payloads — FR-2                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `POST /shops`. Every field is renamed, `mobileNumber` is required, and the
+ * address is stored as street + city + state + pincode rather than one string.
+ * `creditLimit` and `priceListId` ARE accepted here, unlike on the update
+ * route, so a create is a single call.
+ */
+export const toApiShopCreate = (input: ShopInput) => ({
+  shopCode: input.code,
+  shopName: input.name,
+  ownerName: input.ownerName,
+  ownerMobileNumber: input.ownerPhone,
+  mobileNumber: input.mobileNumber,
+  ...(input.ownerEmail ? { email: input.ownerEmail } : {}),
+  address: input.address,
+  ...(input.city ? { city: input.city } : {}),
+  ...(input.state ? { state: input.state } : {}),
+  ...(input.pincode ? { pincode: input.pincode } : {}),
+  ...(input.gstin ? { gstin: input.gstin } : {}),
+  creditLimit: input.creditLimit,
+  ...(input.priceListId ? { priceListId: input.priceListId } : {}),
+});
+
+/**
+ * `PATCH /shops/:id`, which accepts only the descriptive fields. Credit limit
+ * and price list have their own endpoints and are deliberately absent here —
+ * sending them is silently ignored, which reads as a save that did nothing.
+ */
+export const toApiShopDetails = (input: ShopInput) => ({
+  shopName: input.name,
+  mobileNumber: input.mobileNumber,
+  ...(input.ownerEmail ? { email: input.ownerEmail } : {}),
+  address: input.address,
+  ...(input.city ? { city: input.city } : {}),
+  ...(input.state ? { state: input.state } : {}),
+  ...(input.pincode ? { pincode: input.pincode } : {}),
+  ...(input.gstin ? { gstin: input.gstin } : {}),
+});
+
+export { creditBehaviorCodec };
+
+/* -------------------------------------------------------------------------- */
+/* Deliveries — FR-40. UNVERIFIED (no rows on the dev database).               */
+/* -------------------------------------------------------------------------- */
+
+export type ApiDelivery = {
+  id: string;
+  orderId?: string;
+  order?: { id?: string; orderNumber?: string } | null;
+  deliveryDate?: string;
+  status?: string;
+};
+
+export const toDelivery = (api: ApiDelivery): Delivery => ({
+  id: api.id,
+  orderId: api.orderId ?? api.order?.id ?? '',
+  deliveryDate: toApiDateOnly(api.deliveryDate),
+  status: deliveryStatusCodec.fromApi(String(api.status)),
+});
 
 /* -------------------------------------------------------------------------- */
 /* Price lists — verified                                                      */
@@ -261,21 +331,22 @@ export function toOrder(api: ApiOrder): Order {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Ledger — UNVERIFIED                                                         */
+/* Ledger — verified against live rows                                         */
 /* -------------------------------------------------------------------------- */
 
 export type ApiLedgerEntry = {
   id: string;
-  entryDate?: string;
-  createdAt?: string;
-  type?: string;
-  direction?: 'DEBIT' | 'CREDIT';
-  referenceNumber?: string | null;
-  reference?: string | null;
-  description?: string | null;
-  amount?: string | number;
+  shopId?: string;
+  transactionType?: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  /** The two sides are separate columns, not one signed amount. */
+  debitAmount?: string | number | null;
+  creditAmount?: string | number | null;
   runningBalance?: string | number | null;
-  balance?: string | number | null;
+  transactionDate?: string;
+  createdAt?: string;
+  description?: string | null;
 };
 
 const LEDGER_TYPES: Record<string, LedgerEntry['type']> = {
@@ -287,18 +358,19 @@ const LEDGER_TYPES: Record<string, LedgerEntry['type']> = {
 };
 
 export function toLedgerEntry(api: ApiLedgerEntry): LedgerEntry {
-  const magnitude = Math.abs(num(api.amount));
+  const debit = num(api.debitAmount);
+  const credit = num(api.creditAmount);
 
   return {
     id: api.id,
-    date: toApiDateOnly(api.entryDate ?? api.createdAt),
-    type: LEDGER_TYPES[String(api.type)] ?? 'adjustment',
-    reference: api.referenceNumber ?? api.reference ?? '',
+    date: toApiDateOnly(api.transactionDate ?? api.createdAt),
+    type: LEDGER_TYPES[String(api.transactionType)] ?? 'adjustment',
+    reference: api.referenceId ?? '',
     description: api.description ?? '',
-    // The backend splits sign into `direction`; the domain carries it in the
-    // amount, where positive increases what the shop owes.
-    amount: api.direction === 'CREDIT' ? -magnitude : magnitude,
-    runningBalance: num(api.runningBalance ?? api.balance),
+    // The backend keeps debit and credit in separate columns; the domain uses
+    // one signed figure where positive increases what the shop owes.
+    amount: debit - credit,
+    runningBalance: num(api.runningBalance),
   };
 }
 

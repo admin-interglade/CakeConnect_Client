@@ -36,7 +36,7 @@ import {
   orderStatusShortLabels,
 } from '../../../utils/format';
 import type { AdminOrdersStackParamList } from '../../../navigation/types';
-import type { Order, OrderItem, OrderStatus } from '../../../types/admin';
+import type { ShortSupplyLine, Order, OrderItem, OrderStatus } from '../../../types/admin';
 
 type OrderDetailsNavigation = StackNavigationProp<
   AdminOrdersStackParamList,
@@ -88,7 +88,7 @@ export default function OrderDetails() {
 
   const { order, isLoading, isError, error, isRefetching, refetch } =
     useOrderDetails(orderId);
-  const { updateStatus, reopen } = useOrderMutations();
+  const { updateStatus, reopen, shortSupply } = useOrderMutations();
 
   const [pendingStatus, setPendingStatus] = React.useState<OrderStatus | null>(null);
   const [deliveryOpen, setDeliveryOpen] = React.useState(false);
@@ -150,17 +150,29 @@ export default function OrderDetails() {
     setPendingStatus(status);
   };
 
+  /**
+   * FR-40 — delivered quantities live on the delivery, not the order, so this
+   * goes through the deliveries flow rather than the status route (which
+   * accepts only `{status}`). Lines matching the ordered quantity are omitted:
+   * the service treats an undeclared line as delivered in full.
+   */
   const submitDelivery = (values: FormValues) => {
-    const deliveredQty: Record<string, number> = {};
-    order.items.forEach(item => {
-      const entered = Number(values[item.productId]);
-      deliveredQty[item.productId] = Number.isFinite(entered)
-        ? Math.min(Math.max(entered, 0), item.orderedQty)
-        : item.orderedQty;
-    });
+    const lines: ShortSupplyLine[] = order.items
+      .map(item => {
+        const entered = Number(values[item.productId]);
+        const deliveringQty = Number.isFinite(entered)
+          ? Math.min(Math.max(entered, 0), item.orderedQty)
+          : item.orderedQty;
 
-    updateStatus.mutate(
-      { orderId: order.id, status: 'delivered', payload: { deliveredQty } },
+        return { productId: item.productId, deliveringQty };
+      })
+      .filter(line => {
+        const item = order.items.find(candidate => candidate.productId === line.productId);
+        return item ? line.deliveringQty < item.orderedQty : false;
+      });
+
+    shortSupply.mutate(
+      { orderId: order.id, lines },
       { onSuccess: () => setDeliveryOpen(false) },
     );
   };
@@ -312,13 +324,16 @@ export default function OrderDetails() {
             />
           ) : null}
 
-          {/* FR-18 — reopening is an exception, so it sits below the flow. */}
+          {/*
+            FR-18 — reopening after cut-off has no backend endpoint, and the
+            exception has to be audit-logged server-side to mean anything. The
+            action is withheld with a reason rather than offered and failing.
+            See docs/api-gaps.md G10.
+          */}
           {order.status !== 'draft' && order.status !== 'invoiced' ? (
-            <AppButton
-              label={strings.orderDetails.reopenAction}
-              onPress={() => setReopenOpen(true)}
-              variant="link"
-            />
+            <InlineMessage tone="info" icon="information-outline">
+              {strings.orderDetails.reopenUnavailable}
+            </InlineMessage>
           ) : null}
 
           {canCancelOrder(order.status) && order.status !== 'submitted' ? (

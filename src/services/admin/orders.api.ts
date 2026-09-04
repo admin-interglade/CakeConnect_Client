@@ -6,10 +6,9 @@ import type {
   OrderStatusCounts,
   Paginated,
   Pagination,
-  ShortSupplyLine,
 } from '../../types/admin';
 import { addDays, toApiDate } from '../../utils/format';
-import { apiGet, apiGetPaged } from '../api';
+import { apiGet, apiGetPaged, apiPatch, apiPost } from '../api';
 import {
   API_NO_ORDER_PLACED,
   NotImplementedOnServer,
@@ -18,7 +17,6 @@ import {
   toOrder,
   type ApiOrder,
 } from '../mappers';
-import { orders as mockOrders, recordAudit } from './mockStore';
 
 /**
  * Orders — FR-40 queue, FR-17 cut-off compliance, FR-18 reopen.
@@ -122,137 +120,76 @@ export async function getShopsPendingCutoff(): Promise<Order[]> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Writes — MOCK-BACKED. See the banner in `api/index.ts`.                     */
+/* Writes                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * FR-40 — one transition.
+ *
+ * `PATCH /orders/:id/status` accepts only `{status}`, and only the five forward
+ * states; cancellation is its own route. Delivered quantities are NOT accepted
+ * here — they belong to `deliveries.api.ts`, so a Delivered transition that
+ * carries a shortfall must go through `deliverOrder` instead.
+ */
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
-  payload?: { deliveredQty?: Record<string, number>; reason?: string },
 ): Promise<Order> {
-  const index = mockOrders.findIndex(order => order.id === orderId);
-  if (index === -1) {
-    throw new Error('Order not found');
+  if (status === 'cancelled') {
+    return toOrder(await apiPost<ApiOrder>(`/orders/${orderId}/cancel`, {}));
   }
 
-  const previous = mockOrders[index];
-  const items = payload?.deliveredQty
-    ? previous.items.map(item => ({
-        ...item,
-        deliveredQty: payload.deliveredQty?.[item.productId] ?? item.orderedQty,
-      }))
-    : previous.items;
-
-  const updated: Order = {
-    ...previous,
-    status,
-    items,
-    shortSupply: items.some(
-      item => item.deliveredQty !== undefined && item.deliveredQty < item.orderedQty,
-    )
-      ? true
-      : previous.shortSupply,
-    invoiceId:
-      status === 'invoiced'
-        ? previous.invoiceId ?? `INV-${previous.id.replace('CC-', '')}`
-        : previous.invoiceId,
-    statusHistory: [
-      ...previous.statusHistory,
-      { status, at: new Date().toISOString(), actor: 'Franchise admin' },
-    ],
-  };
-
-  mockOrders[index] = updated;
-  recordAudit(previous.shopId, {
-    action: 'Order status changed',
-    field: previous.id,
-    before: previous.status,
-    after: status,
-  });
-
-  return updated;
-}
-
-export async function captureShortSupply(
-  orderId: string,
-  lines: ShortSupplyLine[],
-): Promise<Order> {
-  const index = mockOrders.findIndex(order => order.id === orderId);
-  if (index === -1) {
-    throw new Error('Order not found');
+  if (status === 'draft' || status === 'submitted') {
+    throw new NotImplementedOnServer(
+      'updateOrderStatus',
+      'G10',
+      `the status route cannot move an order back to ${status}`,
+    );
   }
 
-  const previous = mockOrders[index];
-  const byProduct = new Map(lines.map(line => [line.productId, line]));
-
-  const items = previous.items.map(item => {
-    const line = byProduct.get(item.productId);
-    if (!line) {
-      return item;
-    }
-
-    const deliveredQty = Math.min(Math.max(line.deliveringQty, 0), item.orderedQty);
-    return {
-      ...item,
-      deliveredQty,
-      shortSupplyReason: deliveredQty < item.orderedQty ? line.reason : undefined,
-    };
-  });
-
-  const short = items.some(
-    item => item.deliveredQty !== undefined && item.deliveredQty < item.orderedQty,
+  return toOrder(
+    await apiPatch<ApiOrder>(`/orders/${orderId}/status`, {
+      status: orderStatusCodec.toApi(status),
+    }),
   );
-
-  const updated: Order = { ...previous, items, shortSupply: short || undefined };
-
-  mockOrders[index] = updated;
-  recordAudit(previous.shopId, {
-    action: 'Short supply recorded',
-    field: previous.id,
-    before: `${previous.items.length} lines ordered in full`,
-    after: `${items.filter(
-      item => item.deliveredQty !== undefined && item.deliveredQty < item.orderedQty,
-    ).length} lines short`,
-  });
-
-  return updated;
 }
 
+/**
+ * FR-18 — reopen a shop's order after cut-off by exception.
+ *
+ * No endpoint exists. Reconstructing it client-side would mean writing DRAFT
+ * through a route that refuses it, and would leave no audit record of the
+ * exception, which is the part FR-18 actually cares about.
+ * See docs/api-gaps.md G10.
+ */
+export async function reopenOrder(
+  _orderId: string,
+  _reason: string,
+): Promise<Order> {
+  throw new NotImplementedOnServer(
+    'reopenOrder',
+    'G10',
+    'no endpoint reopens an order after cut-off, and the exception must be audit-logged server-side',
+  );
+}
+
+/**
+ * FR-40 — move several orders at once.
+ *
+ * There is no bulk endpoint. Looping client-side would move some orders and
+ * leave the rest, which is exactly the half-moved queue the caller is promised
+ * cannot happen — so this refuses rather than pretending to be atomic.
+ * See docs/api-gaps.md G13.
+ */
 export async function bulkUpdateOrderStatus(
-  orderIds: string[],
-  status: OrderStatus,
+  _orderIds: string[],
+  _status: OrderStatus,
 ): Promise<Order[]> {
-  return Promise.all(orderIds.map(orderId => updateOrderStatus(orderId, status)));
-}
-
-/** FR-18 — reopen after cut-off. No backend endpoint exists; see gap G10. */
-export async function reopenOrder(orderId: string, reason: string): Promise<Order> {
-  const index = mockOrders.findIndex(order => order.id === orderId);
-  if (index === -1) {
-    throw new Error('Order not found');
-  }
-
-  const previous = mockOrders[index];
-  const updated: Order = {
-    ...previous,
-    status: 'draft',
-    wasReopened: true,
-    reopenReason: reason,
-    statusHistory: [
-      ...previous.statusHistory,
-      { status: 'draft', at: new Date().toISOString(), actor: 'Franchise admin (reopen)' },
-    ],
-  };
-
-  mockOrders[index] = updated;
-  recordAudit(previous.shopId, {
-    action: 'Order reopened after cut-off',
-    field: previous.id,
-    before: previous.status,
-    after: `draft - ${reason}`,
-  });
-
-  return updated;
+  throw new NotImplementedOnServer(
+    'bulkUpdateOrderStatus',
+    'G13',
+    'no bulk endpoint; a client-side loop cannot be atomic and would half-move the queue',
+  );
 }
 
 /**

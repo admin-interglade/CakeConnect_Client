@@ -1,5 +1,7 @@
 import type {
+  CreditBehavior,
   DateRangePreset,
+  DeliveryStatus,
   OrderFilters,
   OrderStatus,
   ShopStatus,
@@ -120,6 +122,39 @@ export const dateRangePresetCodec = createEnumCodec<
   lastMonth: 'LAST_MONTH',
   custom: 'CUSTOM',
 });
+
+/* -------------------------------------------------------------------------- */
+/* Credit behaviour — FR-6, PRD §8                                             */
+/* -------------------------------------------------------------------------- */
+
+export type ApiCreditBehavior = 'WARN' | 'BLOCK_ORDER';
+
+export const creditBehaviorCodec = createEnumCodec<CreditBehavior, ApiCreditBehavior>(
+  'credit behaviour',
+  { warn: 'WARN', blockOrder: 'BLOCK_ORDER' },
+);
+
+/* -------------------------------------------------------------------------- */
+/* Delivery status — FR-40                                                     */
+/* -------------------------------------------------------------------------- */
+
+export type ApiDeliveryStatus =
+  | 'PENDING'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'PARTIALLY_DELIVERED'
+  | 'FAILED';
+
+export const deliveryStatusCodec = createEnumCodec<DeliveryStatus, ApiDeliveryStatus>(
+  'delivery status',
+  {
+    pending: 'PENDING',
+    in_transit: 'IN_TRANSIT',
+    delivered: 'DELIVERED',
+    partially_delivered: 'PARTIALLY_DELIVERED',
+    failed: 'FAILED',
+  },
+);
 
 /* -------------------------------------------------------------------------- */
 /* User role — PRD §3                                                          */

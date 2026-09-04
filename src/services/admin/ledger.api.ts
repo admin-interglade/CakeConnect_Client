@@ -1,8 +1,10 @@
-import type { DateRange, LedgerEntry } from '../../types/admin';
-import { toApiDate } from '../../utils/format';
-import { apiGetPaged } from '../api';
+import type {
+  DateRange,
+  LedgerAdjustmentInput,
+  LedgerEntry,
+} from '../../types/admin';
+import { apiGetPaged, apiPost } from '../api';
 import { toLedgerEntry, type ApiLedgerEntry } from '../mappers';
-import { recordAudit, shops as mockShops } from './mockStore';
 
 /**
  * Ledger — FR-23 transaction list, FR-39 adjustments and credit notes.
@@ -34,38 +36,37 @@ export async function getShopLedger(
 }
 
 /* -------------------------------------------------------------------------- */
-/* Writes — MOCK-BACKED. See the banner in `api/index.ts`.                     */
+/* Writes                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * FR-39 — a manual adjustment or a credit note.
+ *
+ * These are two endpoints with different semantics, not one operation with a
+ * sign. An adjustment carries an explicit DEBIT/CREDIT direction; a credit note
+ * is always a positive amount plus a reason, and may be tied to an invoice. The
+ * caller states which it means rather than the service inferring it from
+ * `amount < 0`, which silently made every negative adjustment a credit note.
+ */
 export async function createLedgerAdjustment(
   shopId: string,
-  input: { amount: number; reference: string; description: string },
+  input: LedgerAdjustmentInput,
 ): Promise<LedgerEntry> {
-  const shopIndex = mockShops.findIndex(shop => shop.id === shopId);
-  if (shopIndex === -1) {
-    throw new Error('Shop not found');
-  }
+  const created =
+    input.kind === 'creditNote'
+      ? await apiPost<ApiLedgerEntry>('/ledger/credit-notes', {
+          shopId,
+          amount: Math.abs(input.amount),
+          reason: input.reason,
+          ...(input.invoiceId ? { invoiceId: input.invoiceId } : {}),
+        })
+      : await apiPost<ApiLedgerEntry>('/ledger/adjustments', {
+          shopId,
+          amount: Math.abs(input.amount),
+          type: 'ADJUSTMENT',
+          direction: input.direction === 'credit' ? 'CREDIT' : 'DEBIT',
+          description: input.description,
+        });
 
-  const previousOutstanding = mockShops[shopIndex].outstanding;
-  mockShops[shopIndex] = {
-    ...mockShops[shopIndex],
-    outstanding: previousOutstanding + input.amount,
-  };
-
-  recordAudit(shopId, {
-    action: input.amount < 0 ? 'Credit note issued' : 'Adjustment posted',
-    field: 'outstanding',
-    before: String(previousOutstanding),
-    after: String(previousOutstanding + input.amount),
-  });
-
-  return {
-    id: `led_adj_${Date.now()}`,
-    date: toApiDate(new Date()),
-    type: input.amount < 0 ? 'credit_note' : 'adjustment',
-    reference: input.reference,
-    description: input.description,
-    amount: input.amount,
-    runningBalance: previousOutstanding + input.amount,
-  };
+  return toLedgerEntry(created);
 }
