@@ -12,7 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import authReducer from './authSlice';
-import ordersReducer from './ordersSlice';
+import cartReducer from './cartSlice';
 import { authListener } from './authListener';
 
 /**
@@ -50,20 +50,35 @@ const persistConfig = {
 };
 
 const persistedAuthReducer = persistReducer(persistConfig, authReducer);
-const persistedOrdersReducer = persistReducer(
+/**
+ * FR-11 — the draft cart must survive an app restart and a connectivity loss,
+ * so every field that describes the order in progress is persisted. Omitting
+ * `shopId` or `deliveryDate` would rehydrate lines with nothing to bind them
+ * to, and `draftOrderId` is what stops a restart creating a second server
+ * draft for the same delivery date.
+ */
+const persistedCartReducer = persistReducer(
   {
-    key: 'orders',
+    key: 'cart',
     storage: AsyncStorage,
     timeout: PERSIST_TIMEOUT_DISABLED,
-    whitelist: ['cart', 'pendingSync'],
+    whitelist: [
+      'shopId',
+      'deliveryDate',
+      'lines',
+      'notes',
+      'draftOrderId',
+      'dirty',
+      'lastSyncedAt',
+    ],
   },
-  ordersReducer,
+  cartReducer,
 );
 
 export const store = configureStore({
   reducer: {
     auth: persistedAuthReducer,
-    orders: persistedOrdersReducer,
+    cart: persistedCartReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

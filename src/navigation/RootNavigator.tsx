@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 
 import AuthNavigator from './AuthNavigator';
-import AppNavigator from './AppNavigator';
+import ShopNavigator from './ShopNavigator';
 import AdminNavigator from './AdminNavigator';
 import { navigationTheme } from '../theme';
 import type { RootState } from '../store/store';
@@ -36,7 +36,7 @@ export default function RootNavigator() {
         {isAuthenticated ? (
           <Stack.Screen
             name="App"
-            component={usesAdminShell ? AdminNavigator : AppNavigator}
+            component={usesAdminShell ? AdminNavigator : ShopNavigator}
           />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
