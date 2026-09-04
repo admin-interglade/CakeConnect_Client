@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 import type { AssignedShop, UserRole } from '../store/authSlice';
 import type { OrderStatus } from '../types/admin';
 
@@ -47,32 +49,78 @@ export type AuthStackParamList = {
   AllSet: { session: PendingSession; biometricsEnabled: boolean };
 };
 
-export type MainTabParamList = {
-  HomeTab: undefined;
-  CatalogueTab: undefined;
-  CartTab: undefined;
-  PaymentsTab: undefined;
-  AccountTab: undefined;
+/* -------------------------------------------------------------------------- */
+/* Shop owner (franchise outlet)                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The home stack owns the daily job: see where the day stands, then order.
+ * The catalogue and the cart live here rather than in tabs of their own —
+ * "Place Order" and "Continue Order" are steps in one flow that starts on the
+ * dashboard, and the design gives that flow one tab.
+ */
+export type ShopHomeStackParamList = {
+  ShopHome: undefined;
+  /** FR-5, FR-6 — browse and add, at this shop's prices. */
+  ShopCatalogue: undefined;
+  /** FR-7 to FR-12 — the next-day order under construction. */
+  Cart: undefined;
+  /** FR-34 — offers; `offerId` highlights one and records the FR-35 view. */
+  Offers: { offerId?: string } | undefined;
+  /** FR-43, FR-44 — the in-app notification centre. */
+  Notifications: undefined;
+  /** FR-25 — reached from a notification about an invoice. */
+  InvoiceDetails: { invoiceId: string };
 };
 
-export type HomeStackParamList = {
-  Home: undefined;
-  ProductDetail: { productId: string };
+export type ShopOrdersStackParamList = {
+  ShopOrdersList: undefined;
+  /** FR-22 — one of this shop's orders, in full. */
+  ShopOrderDetails: { orderId: string };
+  /** Reached from an invoiced order. */
+  InvoiceDetails: { invoiceId: string };
 };
 
-export type OrdersStackParamList = {
-  OrdersList: undefined;
-  OrderDetail: { orderId: string };
+/**
+ * The money tab. The statement and paying a bill are the same job seen from two
+ * ends, so they share a stack: "Pay Now" and "View Ledger" both land here.
+ */
+export type ShopLedgerStackParamList = {
+  /** FR-23, FR-24 — the transaction list for any duration. */
+  Transactions: undefined;
+  /** FR-25 — invoice detail with line items and taxes. */
+  InvoiceDetails: { invoiceId: string };
+  /** FR-26 to FR-30 — settle an invoice, the outstanding, or an amount. */
+  ShopPayments: undefined;
 };
 
-export type PaymentsStackParamList = {
-  PaymentsHome: undefined;
-  PaymentDetail: { invoiceId: string };
+/** Everything that is not the daily job: profile, outlets, offers, settings. */
+export type ShopMoreStackParamList = {
+  More: undefined;
+  /** FR-45 — per-event notification preferences. */
+  NotificationSettings: undefined;
+  /** FR-43, FR-44 — reachable from More as well as from the dashboard. */
+  Notifications: undefined;
+  /** FR-34 — the full offers list. */
+  Offers: { offerId?: string } | undefined;
 };
 
-export type AccountStackParamList = {
-  AccountHome: undefined;
-  Profile: undefined;
+/**
+ * Four tabs — Home, Orders, Ledger, More — as the design specifies. Each owns a
+ * stack, so a detail screen keeps the tab bar and the back gesture returns to
+ * the list it was opened from.
+ *
+ * Each tab is typed with `NavigatorScreenParams` so a screen in one stack can
+ * deep-link into a screen in another: "Pay Now" on the dashboard opens the
+ * payments screen inside the Ledger tab, and a notification about an order
+ * opens that order inside the Orders tab, rather than dropping the reader on a
+ * list to find it.
+ */
+export type ShopTabParamList = {
+  HomeTab: NavigatorScreenParams<ShopHomeStackParamList> | undefined;
+  OrdersTab: NavigatorScreenParams<ShopOrdersStackParamList> | undefined;
+  LedgerTab: NavigatorScreenParams<ShopLedgerStackParamList> | undefined;
+  MoreTab: NavigatorScreenParams<ShopMoreStackParamList> | undefined;
 };
 
 /* -------------------------------------------------------------------------- */

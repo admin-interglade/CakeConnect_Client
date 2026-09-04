@@ -36,13 +36,13 @@ function OrderHistoryCard({ order, onPress }: OrderHistoryCardProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Order ${order.id}`}
+      accessibilityLabel={`Order ${order.orderNumber}`}
       accessibilityHint="Opens the order detail"
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.headerRow}>
         <AppText variant="h3" numberOfLines={1} style={styles.reference}>
-          {order.id}
+          {order.orderNumber}
         </AppText>
         <StatusBadge status={order.status} compact />
       </View>

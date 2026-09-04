@@ -6,6 +6,15 @@ import type {
   OrderStatus,
   ShopStatus,
 } from '../../types/admin';
+import type {
+  DiscountType,
+  InvoiceStatus,
+  NotificationCategory,
+  NotificationType,
+  OfferStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../../types/shop';
 import type { UserRole } from '../../store/authSlice';
 import { createEnumCodec } from './codec';
 
@@ -167,3 +176,163 @@ export const userRoleCodec = createEnumCodec<UserRole, ApiUserRole>('user role',
   shopOwner: 'SHOP_OWNER',
   supportStaff: 'SUPPORT_STAFF',
 });
+
+/* -------------------------------------------------------------------------- */
+/* Invoice status — FR-25                                                      */
+/* -------------------------------------------------------------------------- */
+
+export type ApiInvoiceStatus =
+  | 'DRAFT'
+  | 'ISSUED'
+  | 'PARTIALLY_PAID'
+  | 'PAID'
+  | 'OVERDUE'
+  | 'CANCELLED';
+
+export const invoiceStatusCodec = createEnumCodec<InvoiceStatus, ApiInvoiceStatus>(
+  'invoice status',
+  {
+    draft: 'DRAFT',
+    issued: 'ISSUED',
+    partially_paid: 'PARTIALLY_PAID',
+    paid: 'PAID',
+    overdue: 'OVERDUE',
+    cancelled: 'CANCELLED',
+  },
+);
+
+/* -------------------------------------------------------------------------- */
+/* Payment method and status — FR-27, FR-29, FR-30                             */
+/* -------------------------------------------------------------------------- */
+
+export type ApiPaymentMethod =
+  | 'UPI'
+  | 'CARD'
+  | 'NET_BANKING'
+  | 'CASH'
+  | 'CHEQUE'
+  | 'NEFT';
+
+export const paymentMethodCodec = createEnumCodec<PaymentMethod, ApiPaymentMethod>(
+  'payment method',
+  {
+    upi: 'UPI',
+    card: 'CARD',
+    netBanking: 'NET_BANKING',
+    cash: 'CASH',
+    cheque: 'CHEQUE',
+    neft: 'NEFT',
+  },
+);
+
+/** FR-27 — the three rails that go to a gateway, as opposed to the offline ones. */
+export const ONLINE_PAYMENT_METHODS: readonly PaymentMethod[] = [
+  'upi',
+  'card',
+  'netBanking',
+];
+
+export type ApiPaymentStatus =
+  | 'PENDING'
+  | 'SUCCESS'
+  | 'FAILED'
+  | 'PENDING_CONFIRMATION'
+  | 'REJECTED'
+  | 'REFUNDED';
+
+export const paymentStatusCodec = createEnumCodec<PaymentStatus, ApiPaymentStatus>(
+  'payment status',
+  {
+    pending: 'PENDING',
+    success: 'SUCCESS',
+    failed: 'FAILED',
+    pendingConfirmation: 'PENDING_CONFIRMATION',
+    rejected: 'REJECTED',
+    refunded: 'REFUNDED',
+  },
+);
+
+/* -------------------------------------------------------------------------- */
+/* Offers — FR-32, FR-34                                                       */
+/* -------------------------------------------------------------------------- */
+
+export type ApiDiscountType = 'PERCENTAGE' | 'FLAT' | 'BUY_X_GET_Y';
+
+export const discountTypeCodec = createEnumCodec<DiscountType, ApiDiscountType>(
+  'discount type',
+  { percentage: 'PERCENTAGE', flat: 'FLAT', buyXGetY: 'BUY_X_GET_Y' },
+);
+
+export type ApiOfferStatus = 'ACTIVE' | 'SCHEDULED' | 'EXPIRED' | 'WITHDRAWN';
+
+export const offerStatusCodec = createEnumCodec<OfferStatus, ApiOfferStatus>(
+  'offer status',
+  {
+    active: 'ACTIVE',
+    scheduled: 'SCHEDULED',
+    expired: 'EXPIRED',
+    withdrawn: 'WITHDRAWN',
+  },
+);
+
+/* -------------------------------------------------------------------------- */
+/* Notifications — FR-44, FR-45                                                */
+/* -------------------------------------------------------------------------- */
+
+export type ApiNotificationType =
+  | 'CUT_OFF_REMINDER'
+  | 'ORDER_SUBMITTED'
+  | 'ORDER_ACCEPTED'
+  | 'ORDER_IN_PRODUCTION'
+  | 'ORDER_DISPATCHED'
+  | 'ORDER_DELIVERED'
+  | 'INVOICE_GENERATED'
+  | 'PAYMENT_SUCCESS'
+  | 'PAYMENT_FAILED'
+  | 'PAYMENT_OVERDUE'
+  | 'NEW_OFFER'
+  | 'CREDIT_LIMIT_WARNING';
+
+/** FR-44 — the full event list the backend can raise. */
+export const notificationTypeCodec = createEnumCodec<
+  NotificationType,
+  ApiNotificationType
+>('notification type', {
+  cutoffReminder: 'CUT_OFF_REMINDER',
+  orderSubmitted: 'ORDER_SUBMITTED',
+  orderAccepted: 'ORDER_ACCEPTED',
+  orderInProduction: 'ORDER_IN_PRODUCTION',
+  orderDispatched: 'ORDER_DISPATCHED',
+  orderDelivered: 'ORDER_DELIVERED',
+  invoiceGenerated: 'INVOICE_GENERATED',
+  paymentSuccess: 'PAYMENT_SUCCESS',
+  paymentFailed: 'PAYMENT_FAILED',
+  paymentOverdue: 'PAYMENT_OVERDUE',
+  newOffer: 'NEW_OFFER',
+  creditLimitWarning: 'CREDIT_LIMIT_WARNING',
+});
+
+/**
+ * FR-45 — which bucket each event falls in, and therefore whether it can be
+ * muted. Cut-off and financial alerts cannot be; the backend's preferences
+ * endpoint accepts muting them anyway, so the rule is enforced here.
+ * See docs/api-gaps.md G17.
+ */
+export const notificationCategories: Record<NotificationType, NotificationCategory> = {
+  cutoffReminder: 'cutoff',
+  orderSubmitted: 'order',
+  orderAccepted: 'order',
+  orderInProduction: 'order',
+  orderDispatched: 'order',
+  orderDelivered: 'order',
+  invoiceGenerated: 'financial',
+  paymentSuccess: 'financial',
+  paymentFailed: 'financial',
+  paymentOverdue: 'financial',
+  newOffer: 'offer',
+  creditLimitWarning: 'financial',
+};
+
+/** FR-45 — only order and offer notices may be silenced. */
+export const isMuteableNotification = (type: NotificationType): boolean =>
+  notificationCategories[type] === 'order' || notificationCategories[type] === 'offer';

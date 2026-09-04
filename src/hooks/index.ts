@@ -53,3 +53,53 @@ export {
   useProductionRequirement,
   useProductionDetail,
 } from './production/useProduction';
+
+/* -------------------------------------------------------------------------- */
+/* Shop owner                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The outlet's own surface, mirroring the folder layout above:
+ *
+ *   shop/  -> services/shop/*
+ *
+ * Every hook in here is scoped to the outlet `useActiveShop` reports (FR-4),
+ * and the server scopes the rows again from the JWT.
+ */
+export {
+  /* FR-4 */
+  useActiveShop,
+  /* FR-9, FR-13 */
+  useCutoff,
+  /* FR-19 to FR-22 */
+  useShopDashboard,
+  /* FR-5, FR-6. Aliased: the admin catalogue exports a pagination default of
+     the same name, and the two lists page differently. */
+  useShopCatalogue,
+  defaultCatalogueFilters as defaultShopCatalogueFilters,
+  defaultCataloguePagination as defaultShopCataloguePagination,
+  /* FR-7 to FR-12 */
+  useCart,
+  computeTotals,
+  /* FR-22, FR-40 */
+  useShopOrders,
+  useShopOrderDetails,
+  useShopOrderMutations,
+  defaultShopOrderFilters,
+  defaultShopOrderPagination,
+  /* FR-23, FR-25 */
+  useTransactions,
+  useInvoiceDetails,
+  defaultTransactionFilters,
+  defaultTransactionPagination,
+  /* FR-26 to FR-30 */
+  usePayments,
+  defaultPaymentPagination,
+  /* FR-34 */
+  useOffers,
+  /* FR-43 to FR-45 */
+  useNotifications,
+  useNotificationSettings,
+  useUnreadNotificationCount,
+  defaultNotificationPagination,
+} from './shop';

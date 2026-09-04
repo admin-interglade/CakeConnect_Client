@@ -203,12 +203,24 @@ export const toPriceList = (api: ApiPriceList): PriceList => ({
 /* Orders — UNVERIFIED (no rows on the dev database)                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Verified against the backend's `OrderItem` model.
+ *
+ * The item stores `productName` at the time of ordering and the line value in
+ * `totalAmount`; there is no nested `product` (the order include is
+ * `items: true`) and no `lineTotal`. Both older spellings are still read as
+ * fallbacks so a payload from either shape maps.
+ */
 export type ApiOrderItem = {
   id?: string;
   productId: string;
+  productName?: string;
   quantity?: string | number;
   deliveredQuantity?: string | number | null;
   unitPrice?: string | number;
+  tax?: string | number;
+  discount?: string | number;
+  totalAmount?: string | number;
   lineTotal?: string | number;
   notes?: string | null;
   shortSupplyReason?: string | null;
@@ -238,11 +250,19 @@ export type ApiOrder = {
   status: string;
   items?: ApiOrderItem[] | null;
   subtotal?: string | number;
+  /** The model's own column; `taxTotal` is read as a fallback spelling. */
+  taxAmount?: string | number;
   taxTotal?: string | number;
+  discountAmount?: string | number;
   taxBreakdown?: Array<{ label?: string; rate?: string | number; amount?: string | number }> | null;
   totalAmount?: string | number;
   total?: string | number;
+  notes?: string | null;
+  /** True once the cut-off froze the order (FR-10, FR-17). */
+  locked?: boolean;
   invoiceId?: string | null;
+  /** The order include joins the invoice rather than carrying a bare id. */
+  invoice?: { id?: string; invoiceNumber?: string; status?: string } | null;
   statusHistory?: Array<{ status?: string; at?: string; createdAt?: string; actor?: string }> | null;
 };
 
@@ -253,7 +273,12 @@ function toOrderItem(api: ApiOrderItem): OrderItem {
 
   return {
     productId: api.productId,
-    name: api.product?.name ?? api.productId,
+    // The order item carries its own `productName`, snapshotted when the order
+    // was placed, so a later rename never rewrites an order's history.
+    name: api.productName ?? api.product?.name ?? api.productId,
+    // `unit`, `packSize` and `moq` live on the product, which the order include
+    // does not join. They stay at their neutral values here rather than being
+    // guessed; a screen needing them reads the catalogue.
     unit: api.product?.unit ?? '',
     packSize: api.product?.packSize ?? 1,
     moq: api.product?.minimumOrderQuantity ?? 1,
@@ -261,7 +286,7 @@ function toOrderItem(api: ApiOrderItem): OrderItem {
     deliveredQty:
       delivered === null || delivered === undefined ? undefined : num(delivered),
     unitPrice,
-    lineTotal: num(api.lineTotal, orderedQty * unitPrice),
+    lineTotal: num(api.totalAmount ?? api.lineTotal, orderedQty * unitPrice),
     note: api.notes ?? undefined,
     shortSupplyReason: api.shortSupplyReason ?? undefined,
   };
@@ -289,7 +314,9 @@ function toStatusHistory(api: ApiOrder): OrderStatusEvent[] {
 export function toOrder(api: ApiOrder): Order {
   const items = (api.items ?? []).map(toOrderItem);
   const subtotal = num(api.subtotal, items.reduce((sum, item) => sum + item.lineTotal, 0));
-  const taxTotal = num(api.taxTotal);
+  // The model's column is `taxAmount`. Reading only `taxTotal` reported every
+  // order as tax-free regardless of what was actually charged.
+  const taxTotal = num(api.taxAmount ?? api.taxTotal);
 
   const taxBreakdown: TaxLine[] = (api.taxBreakdown ?? [])
     .filter(line => line && line.label !== undefined)
@@ -304,8 +331,12 @@ export function toOrder(api: ApiOrder): Order {
   );
 
   return {
+    // The route id, not the order number: `PATCH /orders/:id`,
+    // `POST /orders/:id/submit`, cancel and delete all take the uuid, and a
+    // display number in its place fails validation before it reaches a row.
+    id: api.id,
     // The human-readable order number is what the queue and search show.
-    id: api.orderNumber ?? api.id,
+    orderNumber: api.orderNumber ?? api.id,
     shopId: api.shopId,
     shopName: api.shop?.shopName ?? '',
     shopCode: api.shop?.shopCode ?? '',
@@ -326,7 +357,7 @@ export function toOrder(api: ApiOrder): Order {
     taxBreakdown,
     total: num(api.totalAmount ?? api.total, subtotal + taxTotal),
     shortSupply: shortSupply || undefined,
-    invoiceId: api.invoiceId ?? undefined,
+    invoiceId: api.invoiceId ?? api.invoice?.id ?? undefined,
   };
 }
 
@@ -384,6 +415,8 @@ export type ApiPayment = {
   invoiceId?: string | null;
   amount?: string | number;
   paymentMethod?: string;
+  /** The model's own column. `status` is read as a fallback spelling only. */
+  paymentStatus?: string;
   status?: string;
   paymentDate?: string | null;
   createdAt?: string;
@@ -397,7 +430,9 @@ export const toPayment = (api: ApiPayment): Payment => ({
   date: toApiDateOnly(api.paymentDate ?? api.createdAt),
   amount: num(api.amount),
   method: api.paymentMethod ?? '',
-  status: api.status ?? '',
+  // The Payment model spells this `paymentStatus`; there is no `status` column,
+  // so reading it left every row's badge blank.
+  status: api.paymentStatus ?? api.status ?? '',
   reference: api.paymentReference ?? api.transactionId ?? '',
   note: api.notes ?? undefined,
 });

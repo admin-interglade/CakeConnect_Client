@@ -100,6 +100,24 @@ const authSlice = createSlice({
       }
     },
 
+    /**
+     * FR-4 — replaces the outlet list on a re-read of `GET /shops`.
+     *
+     * The list is resolved once at sign-in, so anything the admin changes
+     * afterwards — a first shop assigned, a second outlet added — is invisible
+     * until this runs. It keeps the active outlet if it is still in the list,
+     * and falls back to the first one if it is not.
+     */
+    setShops: (state, action: PayloadAction<AssignedShop[]>) => {
+      const shops = action.payload;
+      state.shops = shops;
+
+      const stillAssigned = shops.some(shop => shop.id === state.activeShopId);
+      if (!stillAssigned) {
+        state.activeShopId = shops[0]?.id ?? null;
+      }
+    },
+
     /** FR-4 — Phase 2 switcher; ignores an outlet this login cannot act on. */
     setActiveShop: (state, action: PayloadAction<string>) => {
       if (state.shops.some(shop => shop.id === action.payload)) {
@@ -126,6 +144,7 @@ const authSlice = createSlice({
 export const {
   setCredentials,
   setTokens,
+  setShops,
   setActiveShop,
   setBiometricsEnabled,
   logout,

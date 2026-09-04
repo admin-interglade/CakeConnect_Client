@@ -179,7 +179,14 @@ export type OrderStatusEvent = {
 };
 
 export type Order = {
+  /**
+   * The database id, and the only value the `/orders/:id` routes accept.
+   * Never the human-readable number — submitting `ORD-0007` as a route id is
+   * rejected as a malformed uuid.
+   */
   id: string;
+  /** The human-readable number (`ORD-0007`); what every screen displays. */
+  orderNumber: string;
   shopId: string;
   shopName: string;
   shopCode: string;

@@ -131,12 +131,24 @@ function toAssignedShop(shop: ApiShopSummary): AssignedShop {
  * the server ("owner sees own shops"), so the same call serves both roles; an
  * admin simply sees the whole network and is not tied to any one of them.
  *
- * A failure here must not fail the sign-in: the session is valid regardless,
- * and the shop list can be refetched once the user is inside the app.
+ * **The token has to be passed in.** This runs during sign-in, before
+ * `setCredentials` has been dispatched — that happens at the end of onboarding,
+ * so `isAuthenticated` does not flip mid-flow. Until then the store holds no
+ * token (or, on a re-login, the previous one), so a request relying on the
+ * ambient session goes out unauthenticated, comes back 401, and the shop list
+ * silently arrives empty. The owner then lands on "No outlet assigned" with no
+ * way to recover but to sign in again, which fails identically.
+ *
+ * A failure here still must not fail the sign-in: the session is valid
+ * regardless, and the list can be refetched once the user is inside the app.
  */
-async function fetchOwnShops(): Promise<AssignedShop[]> {
+export async function fetchOwnShops(accessToken?: string): Promise<AssignedShop[]> {
   try {
-    const page = await apiGetPaged<ApiShopSummary>('/shops', { page: 1, limit: 50 });
+    const page = await apiGetPaged<ApiShopSummary>(
+      '/shops',
+      { page: 1, limit: 50 },
+      { authToken: accessToken },
+    );
     return page.items.map(toAssignedShop);
   } catch {
     return [];
@@ -158,7 +170,8 @@ async function toSession(payload: ApiSession): Promise<AuthenticatedSession> {
     email: payload.user.email ?? undefined,
     phone: displayPhone(payload.user.mobileNumber),
     // Admin and support staff work across the network rather than from a shop.
-    shops: role === 'shopOwner' ? await fetchOwnShops() : [],
+    shops:
+      role === 'shopOwner' ? await fetchOwnShops(payload.accessToken) : [],
   };
 }
 
@@ -231,7 +244,9 @@ export async function getCurrentUser(): Promise<AuthenticatedSession> {
   const user = await apiGet<ApiUser>('/auth/me');
 
   // `/auth/me` returns the profile without tokens; the caller already holds
-  // those, so they are echoed back empty rather than invented here.
+  // those, so they are echoed back empty rather than invented here. The empty
+  // string means `fetchOwnShops` falls back to the stored session token, which
+  // is the right credential in this path — the session is already live.
   return toSession({ user, accessToken: '', refreshToken: '' });
 }
 

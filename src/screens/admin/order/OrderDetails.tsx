@@ -199,7 +199,7 @@ export default function OrderDetails() {
     <Screen>
       <ScreenHeader
         title={strings.orderDetails.title}
-        subtitle={strings.orderDetails.subtitle(order.shopName, order.id)}
+        subtitle={strings.orderDetails.subtitle(order.shopName, order.orderNumber)}
         onBack={() => navigation.goBack()}
         actions={[
           {
