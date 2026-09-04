@@ -9,7 +9,7 @@ import {
   PhoneNumberInput,
   Screen,
 } from '../../components';
-import { requestOtp } from '../../services/admin';
+import { requestOtp } from '../../services/auth';
 import { describeApiError } from '../../services/api';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList } from '../../navigation/types';

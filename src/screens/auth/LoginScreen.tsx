@@ -15,7 +15,7 @@ import {
 import { describeApiError } from '../../services/api';
 import { colors, spacing } from '../../constants';
 import type { AuthStackParamList, PendingSession } from '../../navigation/types';
-import { loginWithPassword } from '../../services/auth/auth.api';
+import { loginWithPassword } from '../../services/auth';
 
 type Props = StackScreenProps<AuthStackParamList, 'Login'>;
 

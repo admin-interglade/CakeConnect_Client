@@ -11,7 +11,7 @@ import {
   Screen,
 } from '../../components';
 import useCountdown from '../../hooks/useCountdown';
-import { requestOtp, verifyOtp } from '../../services/admin';
+import { requestOtp, verifyOtp } from '../../services/auth';
 import { describeApiError } from '../../services/api';
 import { colors, fontWeight, spacing } from '../../constants';
 import type { AuthStackParamList, PendingSession } from '../../navigation/types';
