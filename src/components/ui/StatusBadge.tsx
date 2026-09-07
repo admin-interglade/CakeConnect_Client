@@ -97,7 +97,7 @@ export default function StatusBadge({
   );
 }
 
-export { labels as statusLabels };
+export { labels as statusLabels, schemes as statusSchemes };
 
 const styles = StyleSheet.create({
   badge: {

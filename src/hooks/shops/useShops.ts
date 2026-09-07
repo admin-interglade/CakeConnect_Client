@@ -89,4 +89,47 @@ export function useShops(filters: ShopFilters, pagination: Pagination): ShopsRes
   };
 }
 
+/**
+ * How many shops a picker will load in one go. `GET /shops` is paginated with
+ * no "all" mode, and a franchise of this size fits in one page; `truncated`
+ * says so when it does not, rather than quietly offering a partial list.
+ */
+const SHOP_PICKER_LIMIT = 100;
+
+const shopPickerPagination: Pagination = { page: 1, limit: SHOP_PICKER_LIMIT };
+
+type ShopOptionsResult = {
+  shops: Shop[];
+  /** True when the network has more shops than one page holds. */
+  truncated: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  error?: string;
+};
+
+/**
+ * Every shop, by name, for the controls that target one — the FR-14 cut-off
+ * override and anything else that needs a shop picker rather than a directory.
+ *
+ * Shares its cache key with the shops list, so opening the directory first
+ * costs nothing here.
+ */
+export function useShopOptions(): ShopOptionsResult {
+  const list = useQuery({
+    queryKey: queryKeys.shops.list(defaultShopFilters, shopPickerPagination),
+    queryFn: () => getShops(defaultShopFilters, shopPickerPagination),
+    staleTime: 5 * 60_000,
+  });
+
+  const shops = list.data?.items ?? [];
+
+  return {
+    shops,
+    truncated: (list.data?.total ?? 0) > shops.length,
+    isLoading: list.isLoading,
+    isError: list.isError,
+    error: list.error ? describeApiError(list.error) : undefined,
+  };
+}
+
 export default useShops;

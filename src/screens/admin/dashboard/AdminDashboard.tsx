@@ -1,5 +1,11 @@
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +22,7 @@ import {
   OfflineBanner,
   OrderSummaryCard,
   ORDER_CARD_WIDTH,
+  ORDER_CARD_HEIGHT,
   ProductionLineCard,
   Screen,
   ScreenHeader,
@@ -23,11 +30,20 @@ import {
   SimpleBarChart,
   InlineMessage,
   SimpleLineChart,
+  Skeleton,
   SkeletonCards,
   SkeletonList,
   StatCard,
 } from '../../../components';
-import { colors, iconSize, imageSize, spacing, strings } from '../../../constants';
+import {
+  borderRadius,
+  colors,
+  iconSize,
+  imageSize,
+  layout,
+  spacing,
+  strings,
+} from '../../../constants';
 import { useAdminDashboard, useOrderMutations, useOrders } from '../../../hooks';
 import useCountdown from '../../../hooks/useCountdown';
 import { logout } from '../../../store/authSlice';
@@ -125,6 +141,15 @@ export default function AdminDashboard() {
         title={strings.dashboard.title}
         subtitle={strings.dashboard.greeting(user?.name ?? 'Franchise owner')}
         actions={[
+          // FR-13 to FR-16 — the only way in to the cut-off configuration: the
+          // dashboard's quick-action block is commented out, and the cut-off
+          // strip below already spends its action on the pending-orders queue.
+          {
+            icon: 'clock-edit-outline',
+            label: strings.cutoff.title,
+            onPress: () => navigation.navigate('CutoffSettings'),
+            tone: colors.textSecondary,
+          },
           {
             icon: 'logout',
             label: strings.dashboard.logout,
@@ -351,20 +376,62 @@ export default function AdminDashboard() {
           )}
         </SectionCard>
 
-        <SectionCard
-          title={strings.dashboard.recentOrders}
-          actionLabel={strings.dashboard.actionOrders}
-          onAction={() => goToOrders()}
-          style={styles.section}
-        >
+        {/* Deliberately not a SectionCard: a bordered surface around a
+            horizontal strip boxes the cards in and stops them at the gutter,
+            which reads as a broken row rather than "there is more, scroll".
+            A plain heading plus a bled-out carousel lets the last card run off
+            the screen edge, which is what invites the swipe. */}
+        <View style={styles.recentSection}>
+          <View style={styles.recentHeader}>
+            <View style={styles.recentTitle}>
+              <AppText variant="h3" numberOfLines={1}>
+                {strings.dashboard.recentOrders}
+              </AppText>
+              <AppText variant="caption" numberOfLines={1} style={styles.recentSubtitle}>
+                {strings.dashboard.recent.subtitle}
+              </AppText>
+            </View>
+
+            <Pressable
+              onPress={() => goToOrders()}
+              accessibilityRole="button"
+              accessibilityLabel={strings.dashboard.actionOrders}
+              hitSlop={layout.hitSlop}
+              style={({ pressed }) => [
+                styles.recentAction,
+                pressed && styles.recentActionPressed,
+              ]}
+            >
+              <AppText variant="link">{strings.dashboard.actionOrders}</AppText>
+              <Icon
+                name="chevron-right"
+                size={iconSize.sm}
+                color={colors.primary}
+              />
+            </Pressable>
+          </View>
+
           {recent.isLoading ? (
-            <SkeletonList rows={3} />
+            /* Card-shaped placeholders, so the strip does not reflow into a
+               different height when the real orders land. */
+            <View style={styles.recentSkeleton}>
+              {[0, 1].map(index => (
+                <Skeleton
+                  key={index}
+                  height={ORDER_CARD_HEIGHT}
+                  width={ORDER_CARD_WIDTH}
+                  radius={borderRadius.lg}
+                />
+              ))}
+            </View>
           ) : (
             <CardCarousel<Order>
               data={recent.orders}
               keyExtractor={order => order.id}
               itemWidth={ORDER_CARD_WIDTH}
-              emptyMessage={strings.dashboard.charts.empty}
+              emptyMessage={strings.dashboard.recent.empty}
+              style={styles.recentCarousel}
+              contentContainerStyle={styles.recentCarouselContent}
               renderItem={order => (
                 <OrderSummaryCard
                   order={order}
@@ -373,7 +440,7 @@ export default function AdminDashboard() {
               )}
             />
           )}
-        </SectionCard>
+        </View>
 
         {/* <SectionCard
           title={strings.dashboard.quickActions}
@@ -520,6 +587,34 @@ const styles = StyleSheet.create({
   cutoffText: { flex: 1, marginLeft: spacing.md },
   moreItems: { paddingTop: spacing.md },
   viewPlan: { marginTop: spacing.md },
+  recentSection: { marginTop: spacing.lg, marginBottom: spacing.lg },
+  recentHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  recentTitle: { flex: 1, marginRight: spacing.sm },
+  recentSubtitle: { marginTop: spacing.xxs },
+  recentAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    minHeight: layout.minTouchTarget,
+    paddingLeft: spacing.sm,
+  },
+  recentActionPressed: { opacity: 0.7 },
+  // Cancels the screen gutter so the strip runs edge to edge, then re-inset on
+  // the content so the first card still lines up with the heading above it.
+  recentCarousel: {
+    marginTop: spacing.sm,
+    marginHorizontal: -layout.screenPaddingHorizontal,
+  },
+  recentCarouselContent: {
+    paddingLeft: layout.screenPaddingHorizontal,
+    paddingRight: layout.screenPaddingHorizontal,
+  },
+  recentSkeleton: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
   quickActions: { gap: spacing.sm },
   quickAction: { width: '100%' },
   emptyLine: { paddingVertical: spacing.lg },

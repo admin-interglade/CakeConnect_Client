@@ -1,5 +1,6 @@
 import React from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppText from '../ui/AppText';
 import Icon from '../ui/Icon';
@@ -47,8 +48,18 @@ export default function Dropdown<T extends string>({
   style,
   testID,
 }: DropdownProps<T>) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = React.useState(false);
   const selected = options.find(option => option.value === value);
+
+  /**
+   * The sheet sits on the bottom edge, which on a gesture-navigation device is
+   * where the system navigation bar is drawn. Without this the last option is
+   * behind the pill and cannot be tapped. `spacing.sm` on top of the inset
+   * keeps the row clear of it rather than flush against it; the `max` keeps the
+   * old 24pt look on a device that reports no inset at all.
+   */
+  const sheetPadding = Math.max(insets.bottom, spacing.lg) + spacing.sm;
 
   return (
     <View style={[styles.container, style]}>
@@ -94,7 +105,10 @@ export default function Dropdown<T extends string>({
           accessibilityRole="button"
           accessibilityLabel="Close options"
         >
-          <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: sheetPadding }]}
+            onPress={event => event.stopPropagation()}
+          >
             {label ? (
               <AppText variant="h3" style={styles.sheetTitle}>
                 {label}
@@ -172,7 +186,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
     paddingHorizontal: spacing.lg,
     maxHeight: '70%',
     ...(elevation.card as object),

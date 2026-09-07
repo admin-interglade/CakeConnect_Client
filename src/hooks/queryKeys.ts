@@ -71,6 +71,19 @@ export const queryKeys = {
       ['catalogue', 'priceList', priceListId] as const,
   },
 
+  /**
+   * FR-13 to FR-15 — cut-off configuration. Separate from `shop.cutoff`, which
+   * is one outlet's countdown: invalidating this tree must not drop the shop
+   * caches, and vice versa.
+   */
+  cutoff: {
+    all: ['cutoff'] as const,
+    global: ['cutoff', 'global'] as const,
+    holidays: ['cutoff', 'holidays'] as const,
+    /** What the server resolves for one shop, today (gap G23). */
+    effective: (shopId: string) => ['cutoff', 'effective', shopId] as const,
+  },
+
   orders: {
     all: ['orders'] as const,
     list: (filters: OrderFilters, pagination: Pagination) =>

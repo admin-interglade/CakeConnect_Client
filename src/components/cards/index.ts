@@ -5,6 +5,7 @@ export { default as StatCard, type StatCardTone } from './StatCard';
 export {
   default as OrderSummaryCard,
   ORDER_CARD_WIDTH,
+  ORDER_CARD_HEIGHT,
 } from './OrderSummaryCard';
 export { default as ShopCard } from './ShopCard';
 export { default as LedgerEntryCard } from './LedgerEntryCard';

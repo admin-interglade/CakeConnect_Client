@@ -5,17 +5,15 @@ import { EmptyState, Screen, ScreenHeader } from '../../components';
 import { strings } from '../../constants';
 
 /**
- * Stands in for the Batch B admin screens (catalogue and price lists FR-5/FR-6,
- * cut-off configuration FR-13-FR-16, offers FR-32-FR-35, the offline-payment
- * confirmation queue FR-41 and reports FR-42).
+ * Stands in for the Batch B admin screens still to be built: offers
+ * (FR-32-FR-35), the offline-payment confirmation queue (FR-41) and reports
+ * (FR-42).
  *
  * They are routed now so the dashboard's quick actions and any deep link
  * resolve instead of throwing; each is replaced by its real screen in turn.
  */
 
 const titles: Record<string, string> = {
-  Catalogue: 'Catalogue & price lists',
-  CutoffSettings: 'Cut-off settings',
   Offers: 'Offers & announcements',
   PaymentsQueue: 'Payment confirmations',
   Reports: 'Reports',
