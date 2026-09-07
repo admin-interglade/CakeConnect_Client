@@ -12,7 +12,14 @@ type CardCarouselProps<T> = {
   itemWidth: number;
   gap?: number;
   emptyMessage?: string;
+  /**
+   * The scroll view itself — a negative horizontal margin here lets a strip
+   * bleed past the screen gutter so cards run off the edge rather than
+   * stopping short of it.
+   */
   style?: ViewStyle;
+  /** Padding inside the strip; pairs with a bleeding `style` to re-inset. */
+  contentContainerStyle?: ViewStyle;
 };
 
 /**
@@ -30,6 +37,7 @@ export default function CardCarousel<T>({
   gap = spacing.md,
   emptyMessage,
   style,
+  contentContainerStyle,
 }: CardCarouselProps<T>) {
   if (data.length === 0) {
     return emptyMessage ? (
@@ -48,7 +56,8 @@ export default function CardCarousel<T>({
       snapToInterval={itemWidth + gap}
       snapToAlignment="start"
       decelerationRate="fast"
-      contentContainerStyle={[styles.content, { gap }, style]}
+      style={style}
+      contentContainerStyle={[styles.content, { gap }, contentContainerStyle]}
     >
       {data.map((item, index) => (
         <View key={keyExtractor(item)}>{renderItem(item, index)}</View>
@@ -58,6 +67,8 @@ export default function CardCarousel<T>({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingVertical: spacing.xxs, paddingRight: spacing.lg },
+  // Vertical breathing room so the cards' drop shadows are not clipped by the
+  // scroll view's bounds.
+  content: { paddingVertical: spacing.xs, paddingRight: spacing.lg },
   empty: { paddingVertical: spacing.lg, color: colors.textSecondary },
 });

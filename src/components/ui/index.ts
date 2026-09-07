@@ -6,4 +6,9 @@ export { default as BrandMark } from './BrandMark';
 export { default as Icon, type IconProps } from './Icon';
 export { default as InlineMessage, type InlineMessageTone } from './InlineMessage';
 export { default as ProgressBar } from './ProgressBar';
-export { default as StatusBadge, type BadgeStatus, statusLabels } from './StatusBadge';
+export {
+  default as StatusBadge,
+  type BadgeStatus,
+  statusLabels,
+  statusSchemes,
+} from './StatusBadge';
