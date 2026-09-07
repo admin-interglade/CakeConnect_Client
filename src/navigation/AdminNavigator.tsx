@@ -12,6 +12,7 @@ import ShopDetails from '../screens/admin/shops/ShopDetails';
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
 import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
+import CutoffSettings from '../screens/admin/cutoff/CutoffSettings';
 import { Icon } from '../components/ui';
 import { colors, iconSize, layout, spacing } from '../constants';
 import {
@@ -57,11 +58,13 @@ function DashboardStack() {
         component={ProductionDetail}
       />
 
-      {/* Batch B — routed so the dashboard quick actions resolve today. */}
+      {/* FR-13 to FR-16 — reached from the dashboard header. */}
       <DashboardStackNav.Screen
         name="CutoffSettings"
-        component={ComingSoonScreen}
+        component={CutoffSettings}
       />
+
+      {/* Batch B — routed so the dashboard quick actions resolve today. */}
       <DashboardStackNav.Screen name="Offers" component={ComingSoonScreen} />
       <DashboardStackNav.Screen
         name="PaymentsQueue"

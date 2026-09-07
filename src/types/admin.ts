@@ -464,6 +464,94 @@ export type PriceListInput = {
   description?: string;
 };
 
+/* -------------------------------------------------------------------------- */
+/* Cut-off configuration — FR-13 to FR-16                                      */
+/* -------------------------------------------------------------------------- */
+
+/** FR-13 — the global cut-off, and whether an admin has in fact set one. */
+export type GlobalCutoff = {
+  /** "HH:mm" IST (deviation D3). */
+  cutoffTime: string;
+  /**
+   * False when `GET /cutoff/global` answered null and FR-13's documented 22:00
+   * is standing in. The two read the same on screen otherwise, and an admin
+   * deciding whether to save one needs to know which they are looking at.
+   */
+  isSet: boolean;
+};
+
+/** FR-15 — one dated entry in the holiday calendar. */
+export type Holiday = {
+  id: string;
+  /** `YYYY-MM-DD` in IST. */
+  date: string;
+  name: string;
+  /**
+   * FR-15 keeps these apart: a holiday is a note on the calendar, and closing
+   * deliveries for it is a separate decision the admin makes per entry.
+   */
+  isNonDeliveryDay: boolean;
+};
+
+export type HolidayInput = {
+  date: string;
+  name: string;
+  isNonDeliveryDay: boolean;
+};
+
+/**
+ * FR-14's ladder, in the order the backend applies it, plus the answer it can
+ * leave us with: `unattributed` means the server resolved to something other
+ * than the global cut-off and the app cannot see which override did it, because
+ * neither is readable (docs/api-gaps.md G24).
+ */
+export type CutoffSource = 'date' | 'shop' | 'global' | 'default' | 'unattributed';
+
+/**
+ * What is known about one rung of that ladder for a given shop and date.
+ *
+ * `unknown` is its own state rather than a missing value: the backend exposes
+ * no read for the shop and date overrides (docs/api-gaps.md G24), so "no
+ * override is set" and "an override may be set and we cannot see it" are
+ * different answers, and only one of them is safe to act on.
+ */
+export type CutoffLayerState = 'applies' | 'overridden' | 'unknown';
+
+export type CutoffLayer = {
+  source: CutoffSource;
+  state: CutoffLayerState;
+  /** Absent when the state is `unknown`. */
+  cutoffTime?: string;
+  /**
+   * `session` marks a value this app wrote and remembered rather than read back,
+   * so the screen can say so instead of presenting it as server truth. `prd` is
+   * FR-13's 22:00 standing in for a global cut-off nobody has saved.
+   */
+  origin?: 'server' | 'session' | 'prd';
+  /** When a `session` value was written, so the screen can date the claim. */
+  savedAt?: string;
+};
+
+/** The resolved answer the FR-14 precedence explainer shows. */
+export type CutoffResolution = {
+  shopId: string;
+  /** `YYYY-MM-DD` the resolution was asked for. */
+  date: string;
+  cutoffTime: string;
+  source: CutoffSource;
+  /** Highest precedence first, so the screen renders the ladder in order. */
+  layers: CutoffLayer[];
+  /**
+   * True only when the server resolved this itself, which it can do for today
+   * alone — `/cutoff/shops/:id/effective` ignores the date (G23).
+   */
+  serverConfirmed: boolean;
+  /** True when an unreadable layer could still be overriding the answer shown. */
+  uncertain: boolean;
+  /** The holiday calendar entry for this date, when there is one. */
+  holiday?: Holiday;
+};
+
 /**
  * FR-39 — a shop's payment history, which is a distinct record from the ledger
  * entry a confirmed payment produces: a payment can sit in PENDING_CONFIRMATION

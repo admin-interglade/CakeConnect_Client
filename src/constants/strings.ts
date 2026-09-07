@@ -85,6 +85,11 @@ export const strings = {
         'Daily order-value trend is not available from the server yet.',
     },
     recentOrders: 'Recent orders',
+    recent: {
+      subtitle: 'Across the network, last 7 days',
+      items: (count: number) => `${count} ${count === 1 ? 'item' : 'items'}`,
+      empty: 'No orders placed in the last 7 days.',
+    },
     quickActions: 'Quick actions',
     actionOrders: 'All orders',
     actionShops: 'All shops',
@@ -180,7 +185,11 @@ export const strings = {
     creditAvailable: 'Available credit',
     priceList: 'Price list',
     cutoffOverride: 'Cut-off override',
-    cutoffGlobal: 'Uses the global cut-off',
+    /**
+     * Not "uses the global cut-off": no endpoint reports a shop's override
+     * (docs/api-gaps.md G24), so this row cannot tell the two apart.
+     */
+    cutoffGlobal: 'Not readable — set it in Cut-off settings',
     adjustment: 'Add credit note / adjustment',
     adjustmentTitle: 'Manual adjustment',
     adjustmentHint:
@@ -536,6 +545,140 @@ export const strings = {
   /* ------------------------------------------------------------------------ */
 
   /** The four tabs of the shop-owner shell. */
+  /** Cut-off configuration — FR-13 to FR-16. */
+  cutoff: {
+    title: 'Cut-off settings',
+    subtitle: 'When each shop must have ordered by, and which days are closed.',
+
+    tabs: {
+      times: 'Cut-off times',
+      holidays: 'Holidays',
+      resolve: 'Cut-off applies',
+    },
+
+    /* FR-13 — the global default */
+    globalTitle: 'Global cut-off',
+    globalSubtitle: 'Applies to every shop, every day, unless something below overrides it.',
+    globalUnset: (time: string) =>
+      `Not set. The PRD default of ${time} is in force until you save one.`,
+    globalSet: (time: string) => `Set to ${time} for every shop.`,
+    editGlobal: 'Change global cut-off',
+    globalFormTitle: 'Global cut-off',
+    globalSaved: (time: string) => `Global cut-off set to ${time}.`,
+
+    /* FR-14 — the two overrides */
+    shopTitle: 'Per-shop override',
+    shopSubtitle: 'One shop, every day. Beats the global cut-off.',
+    shopFormTitle: 'Override one shop',
+    shopSaved: (time: string) => `Shop cut-off set to ${time}.`,
+    setShopOverride: 'Set shop override',
+
+    dateTitle: 'Per-date override',
+    dateSubtitle: 'One date, every shop. Beats both of the above.',
+    dateFormTitle: 'Override one date',
+    dateSaved: (time: string) => `Cut-off for that date set to ${time}.`,
+    setDateOverride: 'Set date override',
+
+    /**
+     * The write-only half of FR-14. Stated wherever an override is set, because
+     * an admin who assumes they can look it up later will not write it down.
+     */
+    overridesWriteOnly:
+      'Overrides can be set but not listed or removed: the backend has no read for them. To undo one, set it again to the time you want. Anything you save here is remembered on this device only until you close the app.',
+
+    /* FR-15 — the holiday calendar */
+    holidaysTitle: 'Holiday calendar',
+    holidaysSubtitle: 'Dates worth marking, and whether deliveries stop on them.',
+    addHoliday: 'Add holiday',
+    holidayFormTitle: 'Add holiday',
+    holidaySaved: 'Holiday added to the calendar.',
+    holidayDeleted: 'Holiday removed.',
+    holidaysEmpty: 'No holidays on the calendar.',
+    holidaysEmptyMessage: 'Add the dates your kitchen is closed or running short.',
+    deleteHolidayTitle: 'Remove this holiday?',
+    deleteHolidayMessage: (name: string) =>
+      `${name} comes off the calendar. Nothing else changes — the calendar is not enforced.`,
+    /** Column heading; the form's own label is `deliveriesLabel`. */
+    deliveriesColumn: 'Deliveries',
+    nonDeliveryDay: 'No deliveries',
+    deliveryDay: 'Deliveries as normal',
+    /** Section headings splitting the calendar around today. */
+    upcoming: 'Upcoming',
+    past: 'Past',
+    remove: 'Remove',
+
+    /**
+     * FR-15's own gap. `isHoliday()` returns false unconditionally on the
+     * backend, so nothing here blocks an order — and an admin who believes it
+     * does will accept a delivery date the kitchen cannot serve.
+     */
+    holidaysNotEnforced:
+      'Recorded only. Ordering is NOT blocked on these dates and no delivery is stopped: the backend never checks the calendar. Tell shops directly if a day is closed.',
+
+    /* FR-16 — reminders, which have nowhere to be saved and nothing to send them */
+    remindersTitle: 'Cut-off reminders',
+    //remindersSubtitle: 'FR-16 defaults, shown for reference.',
+    reminderOffset: (minutes: number) =>
+      minutes >= 60
+        ? `${minutes / 60} hour${minutes === 60 ? '' : 's'} before cut-off`
+        : `${minutes} minutes before cut-off`,
+    remindersNotActive:
+      'Not active, and not editable. There is no endpoint that stores reminder intervals and no job that sends them, so these two values are what the PRD asks for rather than what the system does.',
+
+    /* The precedence explainer — FR-14 */
+    resolveTitle: 'Cut-off applies',
+    resolveSubtitle: 'Pick a shop and a date to see the ladder resolve.',
+    shopLabel: 'Shop',
+    dateLabel: 'Date',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+    customDate: 'Pick a date',
+    dateHint: 'YYYY-MM-DD',
+    noShops: 'No shops to resolve against yet.',
+    resolvedTitle: (time: string) => `${time} is the cut-off`,
+    resolvedServer:
+      'Resolved by the server for today, so this is the time in force.',
+    resolvedLocal:
+      'Worked out from what this app can see. The server only resolves the cut-off for today, so this is not confirmed.',
+    resolvedUncertain:
+      'An override set outside this session would beat this and cannot be read back, so treat it as the fallback rather than the answer.',
+    sources: {
+      date: 'The date override',
+      shop: 'The shop override',
+      global: 'The global cut-off',
+      default: 'Default',
+      unattributed: 'An override this app cannot identify',
+    },
+    fromSource: (source: string) => `From ${source}.`,
+    layerStates: {
+      applies: 'Applies',
+      overridden: 'Overridden',
+      unknown: 'Not readable',
+    },
+    layerUnknown: 'The backend has no read for this layer, so it may or may not be set.',
+    layerSession: (savedAt: string) => `Saved from this device at ${savedAt}.`,
+    //layerPrd: 'FR-13 default, standing in until a global cut-off is saved.',
+    holidayOnDate: (name: string) => `${name} falls on this date.`,
+    holidayNonDelivery: 'Marked no-deliveries — but nothing enforces that.',
+    unattributedNote:
+      'The server resolves this shop to a different time than the layers below explain, so an override is set that this app cannot see.',
+
+    shopsTruncated: (shown: number) =>
+      `Only the first ${shown} shops are listed here.`,
+
+    /* Shared form copy */
+    overrideHint: 'Saved immediately, and cannot be listed or removed afterwards.',
+    holidayHint: 'Goes on the calendar only. It does not block ordering.',
+    timeLabel: 'Cut-off time',
+    timeHint: '24-hour, IST — e.g. 22:00',
+    timeError: 'Enter a 24-hour time between 00:00 and 23:59.',
+    dateError: 'Enter a real date as YYYY-MM-DD.',
+    holidayNameLabel: 'What is it',
+    holidayNameHint: 'e.g. Diwali, kitchen maintenance',
+    deliveriesLabel: 'Deliveries on this day',
+    istNote: 'Every time here is IST.',
+  },
+
   shopTabs: {
     home: 'Home',
     orders: 'Orders',

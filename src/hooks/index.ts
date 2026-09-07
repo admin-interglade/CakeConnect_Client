@@ -7,6 +7,7 @@
  *   dashboard/   -> services/api/dashboard.api.ts
  *   shops/       -> services/admin/shops.api.ts, ledger.api.ts, payments.api.ts
  *   catalogue/   -> services/admin/products.api.ts, categories.api.ts, priceLists.api.ts
+ *   cutoff/      -> services/admin/cutoff.api.ts
  *   orders/      -> services/api/orders.api.ts
  *   production/  -> services/api/production.api.ts
  *
@@ -25,6 +26,7 @@ export { default as useAdminDashboard } from './dashboard/useAdminDashboard';
 /* Shops — FR-2, FR-3, FR-38, FR-39 */
 export {
   default as useShops,
+  useShopOptions,
   defaultShopFilters,
   defaultPagination,
 } from './shops/useShops';
@@ -38,6 +40,18 @@ export {
   defaultCataloguePagination,
 } from './catalogue/useCatalogue';
 export { default as useCatalogueMutations } from './catalogue/useCatalogueMutations';
+
+/* Cut-off configuration — FR-13, FR-14, FR-15 */
+export { default as useCutoffSettings } from './cutoff/useCutoffSettings';
+export { default as useCutoffMutations } from './cutoff/useCutoffMutations';
+export {
+  useCutoffResolution,
+  resolveCutoff,
+} from './cutoff/useCutoffResolution';
+export {
+  useSessionOverrides,
+  type SessionOverride,
+} from './cutoff/sessionOverrides';
 
 /* Orders — FR-40, FR-17, FR-18 */
 export {
