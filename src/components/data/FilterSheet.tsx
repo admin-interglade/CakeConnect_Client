@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppButton from '../ui/AppButton';
 import AppText from '../ui/AppText';
@@ -43,6 +44,12 @@ export default function FilterSheet({
   applyLabel = strings.common.apply,
   children,
 }: FilterSheetProps) {
+  const insets = useSafeAreaInsets();
+
+  // Same reason as `Dropdown`: a sheet pinned to the bottom edge otherwise puts
+  // its Apply button behind the system navigation bar.
+  const sheetPadding = Math.max(insets.bottom, spacing.lg) + spacing.xs;
+
   return (
     <Modal
       visible={visible}
@@ -57,7 +64,10 @@ export default function FilterSheet({
         accessibilityLabel={strings.common.close}
       >
         {/* Taps inside the sheet must not reach the dismissing backdrop. */}
-        <Pressable style={styles.sheet} onPress={event => event.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { paddingBottom: sheetPadding }]}
+          onPress={event => event.stopPropagation()}
+        >
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -118,7 +128,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
     maxHeight: '85%',
     ...(elevation.card as object),
