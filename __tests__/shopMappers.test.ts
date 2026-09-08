@@ -305,6 +305,35 @@ describe('toOffer — FR-34', () => {
       toOffer({ id: 'o2', discountType: 'FLAT', status: 'ACTIVE' }).productIds,
     ).toEqual([]);
   });
+
+  it('carries the targeting and the FR-35 counters the admin surface reads', () => {
+    const offer = toOffer({
+      id: 'o3',
+      discountType: 'FLAT',
+      status: 'ACTIVE',
+      targetAllShops: false,
+      shops: [{ shopId: 's1' }, { shopId: 's2' }],
+      regions: [{ region: 'North' }],
+      views: 12,
+      redemptions: 0,
+    });
+
+    expect(offer.shopIds).toEqual(['s1', 's2']);
+    expect(offer.regions).toEqual(['North']);
+    expect(offer.views).toBe(12);
+    expect(offer.redemptions).toBe(0);
+  });
+
+  it('leaves a missing counter undefined rather than zeroing it', () => {
+    // "Not reported" and "nobody opened it" are different answers, and the
+    // reach panel draws them differently.
+    const offer = toOffer({ id: 'o4', discountType: 'FLAT', status: 'ACTIVE' });
+
+    expect(offer.views).toBeUndefined();
+    expect(offer.redemptions).toBeUndefined();
+    expect(offer.shopIds).toEqual([]);
+    expect(offer.regions).toEqual([]);
+  });
 });
 
 describe('toNotificationFeed — FR-44', () => {

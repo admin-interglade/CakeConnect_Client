@@ -7,6 +7,8 @@
  * this file rather than on any transport detail.
  */
 
+import type { DiscountType, OfferStatus } from './shop';
+
 /** FR-3 — a suspended shop can read history but cannot order. */
 export type ShopStatus = 'active' | 'suspended' | 'inactive';
 
@@ -605,3 +607,65 @@ export type ExportFormat = 'csv' | 'pdf';
 export type OrderStatusCounts = {
   all: number;
 } & Partial<Record<OrderStatus, number>>;
+
+/* -------------------------------------------------------------------------- */
+/* Offer authoring — FR-32 to FR-35                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The published `Offer` itself lives in `types/shop`, because a shop and the
+ * franchise owner read the same record and it must not be modelled twice. Only
+ * the write shapes — which are the admin's alone — are declared here.
+ */
+
+/** FR-32, FR-33 — the body `POST /offers` accepts. */
+export type OfferInput = {
+  title: string;
+  description?: string;
+  /** The endpoint validates this as a URL, so a bare path is rejected. */
+  bannerUrl?: string;
+  discountType: DiscountType;
+  /** Ignored for `buyXGetY`, where the quantities carry the offer instead. */
+  discountValue: number;
+  buyQuantity?: number;
+  getQuantity?: number;
+  /** `YYYY-MM-DD`. */
+  startDate: string;
+  endDate: string;
+  /**
+   * FR-33 — the whole network, or the shops in `shopIds`. There is no third
+   * option: `regions` is accepted by the endpoint and matches no shop, so this
+   * type does not offer it. See docs/api-gaps.md G25.
+   */
+  targetAllShops: boolean;
+  shopIds: string[];
+  /** Empty means the offer applies across the catalogue. */
+  productIds: string[];
+};
+
+/**
+ * FR-32 — the body `PATCH /offers/:id` accepts, which is deliberately narrower
+ * than `OfferInput`: the endpoint takes no `productIds`, `shopIds` or
+ * `regions`, so an offer's targeting and product list are fixed at creation.
+ * Withdraw the offer and publish a replacement to change either (G25).
+ */
+export type OfferUpdate = {
+  title?: string;
+  description?: string;
+  bannerUrl?: string;
+  discountType?: DiscountType;
+  discountValue?: number;
+  buyQuantity?: number;
+  getQuantity?: number;
+  startDate?: string;
+  endDate?: string;
+  /**
+   * The only way an offer ever changes state: nothing on the backend moves an
+   * offer to `active` at its start date or to `expired` at its end date (G22).
+   */
+  status?: OfferStatus;
+};
+
+export type OfferFilters = {
+  status: OfferStatus | 'all';
+};

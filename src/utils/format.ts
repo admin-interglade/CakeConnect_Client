@@ -9,6 +9,7 @@
  */
 
 import type { OrderStatus, ProductStatus, ShopStatus } from '../types/admin';
+import type { OfferStatus } from '../types/shop';
 
 /** Minutes east of UTC for Asia/Kolkata. */
 const IST_OFFSET_MINUTES = 330;
@@ -279,6 +280,20 @@ export const productStatusLabels: Record<ProductStatus, string> = {
   active: 'Active',
   inactive: 'Inactive',
   unavailable: 'Unavailable',
+};
+
+/**
+ * FR-32 — offer status labels.
+ *
+ * Kept out of `StatusBadge`'s merged label map deliberately: `active` already
+ * belongs to a shop there and means "Active", and an offer's `active` means
+ * "Live". Merging these would silently relabel every shop badge in the app.
+ */
+export const offerStatusLabels: Record<OfferStatus, string> = {
+  active: 'Live',
+  scheduled: 'Scheduled',
+  expired: 'Expired',
+  withdrawn: 'Withdrawn',
 };
 
 /** The FR-40 pipeline in order, excluding the terminal `cancelled` branch. */
