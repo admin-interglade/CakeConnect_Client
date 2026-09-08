@@ -13,6 +13,8 @@ import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
 import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
 import CutoffSettings from '../screens/admin/cutoff/CutoffSettings';
+import OffersList from '../screens/admin/offers/OffersList';
+import OfferDetails from '../screens/admin/offers/OfferDetails';
 import { Icon } from '../components/ui';
 import { colors, iconSize, layout, spacing } from '../constants';
 import {
@@ -64,8 +66,11 @@ function DashboardStack() {
         component={CutoffSettings}
       />
 
+      {/* FR-32 to FR-35 — offer authoring, reached from the dashboard. */}
+      <DashboardStackNav.Screen name="Offers" component={OffersList} />
+      <DashboardStackNav.Screen name="OfferDetails" component={OfferDetails} />
+
       {/* Batch B — routed so the dashboard quick actions resolve today. */}
-      <DashboardStackNav.Screen name="Offers" component={ComingSoonScreen} />
       <DashboardStackNav.Screen
         name="PaymentsQueue"
         component={ComingSoonScreen}
