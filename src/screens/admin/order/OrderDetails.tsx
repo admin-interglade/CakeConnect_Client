@@ -18,6 +18,7 @@ import {
   SectionCard,
   StatusBadge,
   StepProgress,
+  useToast,
   type FormField,
   type FormValues,
   type ProgressStep,
@@ -37,6 +38,9 @@ import {
 } from '../../../utils/format';
 import type { AdminOrdersStackParamList } from '../../../navigation/types';
 import type { ShortSupplyLine, Order, OrderItem, OrderStatus } from '../../../types/admin';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../store/store';
+import { downloadInvoicePdf } from '../../../services/admin';
 
 type OrderDetailsNavigation = StackNavigationProp<
   AdminOrdersStackParamList,
@@ -95,6 +99,31 @@ export default function OrderDetails() {
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [reopenReason, setReopenReason] = React.useState('');
   const [reopenError, setReopenError] = React.useState<string | undefined>();
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
+
+  const toast = useToast();
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+
+  const openInvoicePdf = async () => {
+    if (!order?.invoiceId) {
+      toast.show(strings.orderDetails.noInvoice, { tone: 'info' });
+      return;
+    }
+    if (!accessToken) {
+      toast.show(strings.common.noConnection, { tone: 'error' });
+      return;
+    }
+    setDownloadingPdf(true);
+    try {
+      await downloadInvoicePdf(order.invoiceId, accessToken);
+      toast.show(strings.orderDetails.pdfDownloaded, { tone: 'success' });
+    } catch {
+      toast.show(strings.orderDetails.pdfFailed, { tone: 'error' });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -210,7 +239,11 @@ export default function OrderDetails() {
           {
             icon: 'file-pdf-box',
             label: strings.orderDetails.exportPdf,
-            onPress: () => {},
+            onPress: () => {
+              if (!downloadingPdf) {
+                openInvoicePdf();
+              }
+            },
           },
         ]}
       />

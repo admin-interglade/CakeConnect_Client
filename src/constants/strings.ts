@@ -31,6 +31,7 @@ export const strings = {
     all: 'All',
     loading: 'Loading...',
     somethingWentWrong: 'Something went wrong. Please try again.',
+    noConnection: 'No connection. Check your network and try again.',
     offlineBanner: 'Showing saved data. Reconnect to refresh.',
     page: (page: number, total: number) => `Page ${page} of ${total}`,
     showingCount: (shown: number, total: number) => `Showing ${shown} of ${total}`,
@@ -363,6 +364,9 @@ export const strings = {
     transitionMessage: (label: string) =>
       `This moves the order to "${label}" and notifies the shop. The change is recorded in the audit trail.`,
     statusUpdated: 'Order status updated.',
+    noInvoice: 'No invoice generated for this order yet.',
+    pdfDownloaded: 'Invoice PDF downloaded. Open it from your downloads.',
+    pdfFailed: 'Could not generate the invoice PDF. Try again.',
     cancelTitle: 'Cancel this order?',
     cancelMessage:
       'The shop will be notified that the order was cancelled. This cannot be undone.',
@@ -1201,6 +1205,9 @@ export const strings = {
     basedOnOrdered: 'Billed on the quantity ordered.',
     payThis: 'Pay this invoice',
     settled: 'This invoice is settled.',
+    downloadBill: 'Download bill',
+    billDownloaded: 'Bill downloaded. Open it from your downloads.',
+    billDownloadFailed: 'Could not download the bill. Try again.',
     statuses: {
       draft: 'Draft',
       issued: 'Issued',
