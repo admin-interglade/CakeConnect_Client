@@ -8,6 +8,7 @@
  *   shops/       -> services/admin/shops.api.ts, ledger.api.ts, payments.api.ts
  *   catalogue/   -> services/admin/products.api.ts, categories.api.ts, priceLists.api.ts
  *   cutoff/      -> services/admin/cutoff.api.ts
+ *   offers/      -> services/admin/offers.api.ts
  *   orders/      -> services/api/orders.api.ts
  *   production/  -> services/api/production.api.ts
  *
@@ -40,6 +41,7 @@ export {
   defaultCataloguePagination,
 } from './catalogue/useCatalogue';
 export { default as useCatalogueMutations } from './catalogue/useCatalogueMutations';
+export { useProductOptions } from './catalogue/useCatalogue';
 
 /* Cut-off configuration — FR-13, FR-14, FR-15 */
 export { default as useCutoffSettings } from './cutoff/useCutoffSettings';
@@ -52,6 +54,15 @@ export {
   useSessionOverrides,
   type SessionOverride,
 } from './cutoff/sessionOverrides';
+
+/* Offer authoring — FR-32 to FR-35 */
+export {
+  default as useAdminOffers,
+  useOfferDetails,
+  defaultOfferFilters,
+  defaultOfferPagination,
+} from './offers/useAdminOffers';
+export { default as useOfferMutations } from './offers/useOfferMutations';
 
 /* Orders — FR-40, FR-17, FR-18 */
 export {

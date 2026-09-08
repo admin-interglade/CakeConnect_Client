@@ -1,5 +1,6 @@
 import type {
   DateRange,
+  OfferFilters,
   OrderFilters,
   Pagination,
   ProductFilters,
@@ -82,6 +83,19 @@ export const queryKeys = {
     holidays: ['cutoff', 'holidays'] as const,
     /** What the server resolves for one shop, today (gap G23). */
     effective: (shopId: string) => ['cutoff', 'effective', shopId] as const,
+  },
+
+  /**
+   * FR-32 to FR-35 — offer authoring. Separate from `shop.offers`, which is one
+   * outlet's announcement feed: publishing an offer must refresh the admin list
+   * without touching a shop's cache, and the two hold different rows anyway
+   * (this one is unscoped).
+   */
+  offers: {
+    all: ['offers'] as const,
+    list: (filters: OfferFilters, pagination: Pagination) =>
+      ['offers', 'list', filters.status, pagination.page, pagination.limit] as const,
+    detail: (offerId: string) => ['offers', 'detail', offerId] as const,
   },
 
   orders: {

@@ -85,4 +85,48 @@ export function useCatalogue(
   };
 }
 
+/**
+ * Same shape as `useShopOptions`, and for the same reason: the offer composer
+ * needs every product by name to name a few of them, not a paged directory.
+ *
+ * One page, and the screen says so when there is more than one — a picker that
+ * quietly offers a subset of the catalogue is how an offer ends up missing the
+ * product it was written for.
+ */
+const PRODUCT_PICKER_LIMIT = 100;
+
+const productPickerPagination: Pagination = { page: 1, limit: PRODUCT_PICKER_LIMIT };
+
+type ProductOptionsResult = {
+  products: Product[];
+  /** True when the catalogue holds more products than one page carries. */
+  truncated: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  error?: string;
+};
+
+export function useProductOptions(): ProductOptionsResult {
+  const list = useQuery({
+    // Shares the catalogue screen's cache key, so opening that first costs
+    // nothing here.
+    queryKey: queryKeys.catalogue.products(
+      defaultProductFilters,
+      productPickerPagination,
+    ),
+    queryFn: () => getProducts(defaultProductFilters, productPickerPagination),
+    staleTime: 5 * 60_000,
+  });
+
+  const products = list.data?.items ?? [];
+
+  return {
+    products,
+    truncated: (list.data?.total ?? 0) > products.length,
+    isLoading: list.isLoading,
+    isError: list.isError,
+    error: list.error ? describeApiError(list.error) : undefined,
+  };
+}
+
 export default useCatalogue;
