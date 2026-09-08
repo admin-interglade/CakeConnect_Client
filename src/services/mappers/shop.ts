@@ -403,6 +403,16 @@ export type ApiOffer = {
   status?: string;
   targetAllShops?: boolean;
   products?: Array<{ productId?: string }> | null;
+  /**
+   * Every offer route includes `products`, `shops` and `regions`, and the
+   * counters come back on the row itself because no route narrows the select.
+   * They are still typed optional: this shape describes the wire, and a payload
+   * that stops carrying one must degrade rather than read as zero.
+   */
+  shops?: Array<{ shopId?: string }> | null;
+  regions?: Array<{ region?: string }> | null;
+  views?: number | null;
+  redemptions?: number | null;
 };
 
 export const toOffer = (api: ApiOffer): Offer => ({
@@ -423,6 +433,20 @@ export const toOffer = (api: ApiOffer): Offer => ({
   productIds: (api.products ?? [])
     .map(row => row.productId)
     .filter((id): id is string => Boolean(id)),
+  // FR-33 — the explicit shop list, which is the only targeting the backend
+  // actually matches on. Regions are carried through so the admin screen can
+  // show that an offer names one, and say that naming one reaches nobody.
+  shopIds: (api.shops ?? [])
+    .map(row => row.shopId)
+    .filter((id): id is string => Boolean(id)),
+  regions: (api.regions ?? [])
+    .map(row => row.region)
+    .filter((region): region is string => Boolean(region)),
+  // FR-35 — left undefined rather than zeroed when absent: "not reported" and
+  // "nobody opened it" are different answers and the reach panel draws them
+  // differently.
+  views: typeof api.views === 'number' ? api.views : undefined,
+  redemptions: typeof api.redemptions === 'number' ? api.redemptions : undefined,
 });
 
 /* -------------------------------------------------------------------------- */

@@ -1,16 +1,16 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import {
   AppButton,
   AppText,
   ConfirmDialog,
-  DataTable,
   Dropdown,
   EmptyState,
   ErrorState,
   FilterBar,
+  Icon,
   InlineMessage,
   ModalForm,
   Pagination as PaginationBar,
@@ -21,13 +21,21 @@ import {
   SegmentedTabs,
   SkeletonList,
   StatusBadge,
-  type DataTableColumn,
   type DropdownOption,
   type FormField,
   type FormValues,
   type SegmentedTab,
 } from '../../../components';
-import { colors, spacing, strings } from '../../../constants';
+import {
+  borderRadius,
+  borderWidth,
+  colors,
+  elevation,
+  iconSize,
+  layout,
+  spacing,
+  strings,
+} from '../../../constants';
 import {
   defaultCataloguePagination,
   defaultProductFilters,
@@ -106,71 +114,11 @@ export default function CatalogueScreen() {
   const activeFilterCount =
     (filters.status === 'all' ? 0 : 1) + (filters.categoryId === 'all' ? 0 : 1);
 
-  const columns: DataTableColumn<Product>[] = [
-    {
-      key: 'name',
-      title: strings.catalogue.columns.product,
-      width: 170,
-      render: row => row.name,
-    },
-    { key: 'sku', title: strings.catalogue.columns.sku, width: 110, render: row => row.sku },
-    {
-      key: 'category',
-      title: strings.catalogue.columns.category,
-      width: 130,
-      render: row =>
-        row.categoryName ??
-        categories.find(category => category.id === row.categoryId)?.name ??
-        '-',
-    },
-    {
-      key: 'price',
-      title: strings.catalogue.columns.price,
-      width: 110,
-      align: 'right',
-      render: row => formatCurrency(row.basePrice),
-    },
-    { key: 'unit', title: strings.catalogue.columns.unit, width: 80, render: row => row.unit },
-    {
-      key: 'moq',
-      title: strings.catalogue.columns.moq,
-      width: 70,
-      align: 'right',
-      render: row => formatNumber(row.moq),
-    },
-    {
-      key: 'packSize',
-      title: strings.catalogue.columns.packSize,
-      width: 90,
-      align: 'right',
-      render: row => formatNumber(row.packSize),
-    },
-    {
-      key: 'status',
-      title: strings.catalogue.columns.status,
-      width: 120,
-      render: row => <StatusBadge status={row.status} compact />,
-    },
-    {
-      key: 'actions',
-      title: '',
-      width: 190,
-      render: row => (
-        <View style={styles.rowActions}>
-          <AppButton
-            label={strings.catalogue.availabilityTitle}
-            variant="link"
-            onPress={() => setAvailabilityFor(row)}
-          />
-          <AppButton
-            label={strings.common.deactivate}
-            variant="link"
-            onPress={() => setPendingDelete({ kind: 'product', row })}
-          />
-        </View>
-      ),
-    },
-  ];
+  /** Resolves the display category for a row that arrives without its name. */
+  const categoryNameFor = (product: Product) =>
+    product.categoryName ??
+    categories.find(category => category.id === product.categoryId)?.name ??
+    strings.catalogue.card.uncategorised;
 
   const productFields = React.useMemo<FormField[]>(
     () => [
@@ -395,6 +343,18 @@ export default function CatalogueScreen() {
             style={styles.action}
           />
 
+          {/* Said once above the list rather than on every card: the pill on a
+              card is the product's stored status, and a date-specific override
+              set through the availability action cannot be read back to change
+              it (docs/api-gaps.md). */}
+          <InlineMessage
+            tone="info"
+            icon="information-outline"
+            style={styles.productsNotice}
+          >
+            {strings.catalogue.availabilityWriteOnly}
+          </InlineMessage>
+
           {isLoading ? (
             <SkeletonList rows={6} />
           ) : products.length === 0 ? (
@@ -404,12 +364,16 @@ export default function CatalogueScreen() {
             />
           ) : (
             <>
-              <DataTable
-                columns={columns}
-                rows={products}
-                keyExtractor={row => row.id}
-                onRowPress={row => setProductForm(row)}
-              />
+              {products.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  categoryName={categoryNameFor(product)}
+                  onEdit={() => setProductForm(product)}
+                  onAvailability={() => setAvailabilityFor(product)}
+                  onDeactivate={() => setPendingDelete({ kind: 'product', row: product })}
+                />
+              ))}
               <PaginationBar
                 page={pagination.page}
                 limit={pagination.limit}
@@ -614,6 +578,187 @@ export default function CatalogueScreen() {
   );
 }
 
+/**
+ * FR-5 — one product, as a card rather than a table row.
+ *
+ * A table made an admin scroll sideways to reach the two things they came for:
+ * whether the product is on sale, and the availability override. Both are on
+ * the card now — the status pill beside the name, and the actions in a footer
+ * that reads the same on every card, so the tap target never moves.
+ *
+ * The card body itself edits the product, which is what a tap on a row did
+ * before. A deactivated product is muted rather than dropped: the filter above
+ * decides what is listed, and a greyed card says "inactive" more plainly than
+ * an absence does.
+ */
+function ProductCard({
+  product,
+  categoryName,
+  onEdit,
+  onAvailability,
+  onDeactivate,
+}: {
+  product: Product;
+  categoryName: string;
+  onEdit: () => void;
+  onAvailability: () => void;
+  onDeactivate: () => void;
+}) {
+  const { card } = strings.catalogue;
+  const isInactive = product.status === 'inactive';
+
+  const note =
+    product.status === 'inactive'
+      ? card.inactiveNote
+      : product.status === 'unavailable'
+      ? card.unavailableNote
+      : null;
+
+  return (
+    <View style={[styles.productCard, isInactive && styles.productCardMuted]}>
+      <Pressable
+        onPress={onEdit}
+        accessibilityRole="button"
+        accessibilityLabel={product.name}
+        accessibilityHint={card.edit}
+        style={({ pressed }) => [styles.productBody, pressed && styles.pressed]}
+      >
+        <View style={styles.productHead}>
+          {product.imageUrl ? (
+            <Image
+              source={{ uri: product.imageUrl }}
+              style={styles.thumb}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <View style={[styles.thumb, styles.thumbFallback]}>
+              <Icon
+                name="cake-variant-outline"
+                size={iconSize.lg}
+                color={isInactive ? colors.textMuted : colors.primary}
+              />
+            </View>
+          )}
+
+          <View style={styles.productText}>
+            <View style={styles.productTitleRow}>
+              <AppText
+                variant="h3"
+                numberOfLines={2}
+                color={isInactive ? colors.textSecondary : colors.textPrimary}
+                style={styles.productName}
+              >
+                {product.name}
+              </AppText>
+              <StatusBadge status={product.status} compact />
+            </View>
+
+            <AppText variant="caption" numberOfLines={1} style={styles.productMeta}>
+              {`${card.sku(product.sku)}  ·  ${categoryName}`}
+            </AppText>
+
+            <View style={styles.priceRow}>
+              <AppText variant="h3" color={colors.primary}>
+                {formatCurrency(product.basePrice)}
+              </AppText>
+              <AppText variant="caption">{card.perUnit(product.unit)}</AppText>
+            </View>
+          </View>
+        </View>
+
+        {/* MOQ and pack size are what an order gets rounded to, so they stay on
+            the card rather than only inside the edit form. */}
+        <View style={styles.chipRow}>
+          <MetaChip
+            icon="numeric"
+            label={card.moq(formatNumber(product.moq), product.unit)}
+          />
+          <MetaChip
+            icon="package-variant-closed"
+            label={card.pack(formatNumber(product.packSize))}
+          />
+        </View>
+
+        {note ? (
+          <AppText variant="caption" color={colors.warning} style={styles.productNote}>
+            {note}
+          </AppText>
+        ) : null}
+      </Pressable>
+
+      <View style={styles.productActions}>
+        <CardAction
+          icon="calendar-edit"
+          label={card.availability}
+          accessibilityLabel={`${strings.catalogue.availabilityTitle} — ${product.name}`}
+          onPress={onAvailability}
+        />
+
+        {/* An already-inactive product has nothing left to deactivate; the card
+            keeps the space so the footer does not shift between rows. */}
+        {isInactive ? (
+          <View style={styles.actionSpacer} />
+        ) : (
+          <CardAction
+            icon="trash-can-outline"
+            label={strings.common.deactivate}
+            accessibilityLabel={`${strings.common.deactivate} ${product.name}`}
+            tone="danger"
+            onPress={onDeactivate}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** A read-only fact on a product card — MOQ, pack size. */
+function MetaChip({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={styles.chip}>
+      <Icon name={icon} size={iconSize.xs} color={colors.textSecondary} />
+      <AppText variant="caption" style={styles.chipLabel}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+/**
+ * A footer action on a product card. Small by design, so `hitSlop` rather than
+ * padding carries the 44pt touch target.
+ */
+function CardAction({
+  icon,
+  label,
+  accessibilityLabel,
+  tone = 'default',
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  accessibilityLabel: string;
+  tone?: 'default' | 'danger';
+  onPress: () => void;
+}) {
+  const tint = tone === 'danger' ? colors.error : colors.primary;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={layout.hitSlop}
+      style={({ pressed }) => [styles.cardAction, pressed && styles.pressed]}
+    >
+      <Icon name={icon} size={iconSize.sm} color={tint} />
+      <AppText variant="caption" color={tint} style={styles.cardActionLabel}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 /** Blocks the delete when a category still holds products (FR-15). */
 function deleteMessage(
   pending:
@@ -708,5 +853,76 @@ const styles = StyleSheet.create({
   },
   itemName: { flex: 1, marginRight: spacing.sm },
   notice: { marginTop: spacing.md },
-  rowActions: { flexDirection: 'row', alignItems: 'center' },
+  productsNotice: { marginBottom: spacing.md },
+
+  productCard: {
+    backgroundColor: colors.surface,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...(elevation.card as object),
+  },
+  productCardMuted: {
+    backgroundColor: colors.surfaceMuted,
+    ...(elevation.none as object),
+  },
+  productBody: { padding: spacing.lg },
+  productHead: { flexDirection: 'row' },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primarySoft,
+    marginRight: spacing.lg,
+  },
+  thumbFallback: { alignItems: 'center', justifyContent: 'center' },
+  productText: { flex: 1 },
+  productTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  productName: { flex: 1 },
+  productMeta: { marginTop: spacing.xxs },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.circle,
+    backgroundColor: colors.surfaceSunken,
+  },
+  chipLabel: { marginLeft: spacing.xs },
+  productNote: { marginTop: spacing.sm },
+  productActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: borderWidth.hairline,
+    borderTopColor: colors.divider,
+    backgroundColor: colors.surfaceMuted,
+  },
+  cardAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+  },
+  cardActionLabel: { marginLeft: spacing.xs },
+  actionSpacer: { flex: 1 },
+  pressed: { opacity: 0.7 },
 });

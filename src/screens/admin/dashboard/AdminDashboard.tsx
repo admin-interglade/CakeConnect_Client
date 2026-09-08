@@ -44,9 +44,20 @@ import {
   spacing,
   strings,
 } from '../../../constants';
-import { useAdminDashboard, useOrderMutations, useOrders } from '../../../hooks';
+import {
+  useAdminDashboard,
+  useAdminOffers,
+  useOrderMutations,
+  useOrders,
+} from '../../../hooks';
 import useCountdown from '../../../hooks/useCountdown';
+import { isOverdueForExpiry } from '../../../services/admin';
 import { logout } from '../../../store/authSlice';
+import OfferCard, {
+  OFFER_CARD_WIDTH,
+  OFFER_CARD_HEIGHT,
+} from '../offers/components/OfferCard';
+import type { Offer } from '../../../types/shop';
 import type { RootState } from '../../../store/store';
 import { defaultRange } from '../../../utils/dateRange';
 import {
@@ -111,6 +122,12 @@ export default function AdminDashboard() {
     },
     { page: 1, limit: 10 },
   );
+
+  /*
+   * FR-32 to FR-35 — the offers behind the strip. Live ones only, and five of
+   * them: the strip is a glance, and the whole list is one tap away.
+   */
+  const liveOffers = useAdminOffers({ status: 'active' }, { page: 1, limit: 5 });
 
   const { exportProduction } = useOrderMutations();
 
@@ -442,6 +459,80 @@ export default function AdminDashboard() {
           )}
         </View>
 
+        {/* FR-32 to FR-35 — what the network is being offered right now.
+            Same shape as the recent-orders strip above, and for the same
+            reason: this is a glance, and the whole list is one tap away.
+
+            It carries its own loading and failure states rather than joining
+            the dashboard's, so an offers endpoint having a bad day costs the
+            franchise owner a strip rather than the screen. */}
+        <View style={styles.recentSection}>
+          <View style={styles.recentHeader}>
+            <View style={styles.recentTitle}>
+              <AppText variant="h3" numberOfLines={1}>
+                {strings.dashboard.offers.title}
+              </AppText>
+              <AppText variant="caption" numberOfLines={1} style={styles.recentSubtitle}>
+                {strings.dashboard.offers.subtitle}
+              </AppText>
+            </View>
+
+            <Pressable
+              onPress={() => navigation.navigate('Offers')}
+              accessibilityRole="button"
+              accessibilityLabel={strings.dashboard.actionAllOffers}
+              hitSlop={layout.hitSlop}
+              style={({ pressed }) => [
+                styles.recentAction,
+                pressed && styles.recentActionPressed,
+              ]}
+            >
+              <AppText variant="link">{strings.dashboard.actionAllOffers}</AppText>
+              <Icon name="chevron-right" size={iconSize.sm} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          {liveOffers.isLoading ? (
+            /* Card-shaped, so the strip does not reflow into a different
+               height when the real offers land. */
+            <View style={styles.recentSkeleton}>
+              {[0, 1].map(index => (
+                <Skeleton
+                  key={index}
+                  height={OFFER_CARD_HEIGHT}
+                  width={OFFER_CARD_WIDTH}
+                  radius={borderRadius.lg}
+                />
+              ))}
+            </View>
+          ) : liveOffers.isError ? (
+            <InlineMessage tone="warning" style={styles.offersNotice}>
+              {strings.dashboard.offers.unavailable}
+            </InlineMessage>
+          ) : (
+            <CardCarousel<Offer>
+              data={liveOffers.offers}
+              keyExtractor={offer => offer.id}
+              itemWidth={OFFER_CARD_WIDTH}
+              emptyMessage={strings.dashboard.offers.empty}
+              style={styles.recentCarousel}
+              contentContainerStyle={styles.recentCarouselContent}
+              renderItem={offer => (
+                <OfferCard
+                  offer={offer}
+                  compact
+                  stranded={
+                    isOverdueForExpiry(offer) ? 'expiry' : undefined
+                  }
+                  onPress={() =>
+                    navigation.navigate('OfferDetails', { offerId: offer.id })
+                  }
+                />
+              )}
+            />
+          )}
+        </View>
+
         {/* <SectionCard
           title={strings.dashboard.quickActions}
           style={styles.section}
@@ -615,6 +706,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  offersNotice: { marginTop: spacing.sm },
   quickActions: { gap: spacing.sm },
   quickAction: { width: '100%' },
   emptyLine: { paddingVertical: spacing.lg },

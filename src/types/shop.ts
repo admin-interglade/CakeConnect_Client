@@ -311,6 +311,28 @@ export type Offer = {
   targetAllShops: boolean;
   /** Empty means the offer applies across the catalogue. */
   productIds: string[];
+  /**
+   * FR-33 — the shops the offer names when `targetAllShops` is false. An empty
+   * list alongside `targetAllShops: false` is an offer that reaches nobody,
+   * which the admin authoring screen refuses to save.
+   */
+  shopIds: string[];
+  /**
+   * FR-33 — the regions the offer names. Recorded and matched against nothing:
+   * `Shop` has no region column and the offer list query never joins on one,
+   * so a region here reaches no shop at all. See docs/api-gaps.md G25.
+   */
+  regions: string[];
+  /**
+   * FR-35 — how many times a shop opened this offer. Undefined when the payload
+   * did not carry the counter, which is not the same as zero.
+   */
+  views?: number;
+  /**
+   * FR-35 — how many orders used it. Structurally always zero: the order pricer
+   * writes `discount: 0` and nothing anywhere increments this. See G20.
+   */
+  redemptions?: number;
 };
 
 /* -------------------------------------------------------------------------- */
