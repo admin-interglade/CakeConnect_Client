@@ -3,6 +3,9 @@ import type { Invoice } from '../../types/shop';
 import { apiGet, apiGetPaged } from '../api';
 import { toInvoice, type ApiInvoice } from '../mappers';
 
+/** Download/PDF transport for an invoice; shared with the admin side. */
+export { downloadInvoicePdf } from '../invoicePdf';
+
 /**
  * The shop's invoices — FR-25, and the payable list behind FR-26.
  *

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The test build talks to a LAN dev backend over plain http://. Android
+  blocks cleartext by default on API 28+, and React Native's gradle plugin
+  force-disables it on release, so we permit it here. Once the backend
+  serves real HTTPS, narrow this down to your domain (a <domain-config>
+  per host) or delete the file entirely.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

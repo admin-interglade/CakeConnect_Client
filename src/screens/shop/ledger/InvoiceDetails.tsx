@@ -14,9 +14,13 @@ import {
   Screen,
   ScreenHeader,
   SectionCard,
+  useToast,
 } from '../../../components';
 import { colors, iconSize, spacing, strings } from '../../../constants';
 import { useInvoiceDetails } from '../../../hooks';
+import { downloadInvoicePdf } from '../../../services/shop';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../store/store';
 import { formatCurrency, formatDate, formatNumber } from '../../../utils/format';
 import type { InvoiceLine } from '../../../types/shop';
 import type {
@@ -50,6 +54,29 @@ export default function InvoiceDetails() {
     params.invoiceId,
   );
 
+  const toast = useToast();
+  const accessToken = useSelector((state: RootState) => state.auth.token);
+  const [downloading, setDownloading] = React.useState(false);
+
+  const downloadBill = async () => {
+    if (!invoice) {
+      return;
+    }
+    if (!accessToken) {
+      toast.show(strings.common.noConnection, { tone: 'error' });
+      return;
+    }
+    setDownloading(true);
+    try {
+      await downloadInvoicePdf(invoice.id, accessToken);
+      toast.show(strings.invoice.billDownloaded, { tone: 'success' });
+    } catch {
+      toast.show(strings.invoice.billDownloadFailed, { tone: 'error' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Screen>
@@ -82,6 +109,13 @@ export default function InvoiceDetails() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <AppButton
+          label={downloading ? strings.common.loading : strings.invoice.downloadBill}
+          icon="file-pdf-box"
+          onPress={downloadBill}
+          loading={downloading}
+        />
+
         <SectionCard title={strings.invoice.title}>
           <DetailRow
             icon="calendar-outline"

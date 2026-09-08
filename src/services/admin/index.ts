@@ -30,6 +30,7 @@ export * from './categories.api';
 export * from './cutoff.api';
 export * from './deliveries.api';
 export * from './dashboard.api';
+export * from './invoices.api';
 export * from './ledger.api';
 export * from './offers.api';
 export * from './orders.api';
