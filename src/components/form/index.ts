@@ -5,6 +5,10 @@ export { default as PhoneNumberInput } from './PhoneNumberInput';
 export { default as OtpInput } from './OtpInput';
 export { default as SearchInput } from './SearchInput';
 export { default as Dropdown, type DropdownOption } from './Dropdown';
+export {
+  default as MultiSelect,
+  type MultiSelectOption,
+} from './MultiSelect';
 export { default as DateRangePicker } from './DateRangePicker';
 export { default as QuantityStepper } from './QuantityStepper';
 export {

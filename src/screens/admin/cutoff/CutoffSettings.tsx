@@ -338,7 +338,7 @@ export default function CutoffSettings() {
           {/* FR-16. Read-only on purpose — see the header comment. */}
           <SectionCard
             title={strings.cutoff.remindersTitle}
-            subtitle={strings.cutoff.remindersSubtitle}
+            //subtitle={strings.cutoff.remindersSubtitle}
           >
             {REMINDER_OFFSETS_MINUTES.map(minutes => (
               <View key={minutes} style={styles.reminderRow}>
@@ -736,8 +736,6 @@ function LayerRow({ layer }: { layer: CutoffLayer }) {
       : layer.origin === 'session' && layer.savedAt
       ? cutoff.layerSession(formatTime(layer.savedAt))
       : layer.origin === 'prd'
-      ? cutoff.layerPrd
-      : undefined;
 
   return (
     <View style={styles.layerRow}>

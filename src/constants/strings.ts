@@ -35,6 +35,12 @@ export const strings = {
     page: (page: number, total: number) => `Page ${page} of ${total}`,
     showingCount: (shown: number, total: number) => `Showing ${shown} of ${total}`,
     selectedCount: (count: number) => `${count} selected`,
+    andMore: (count: number) => `+${count} more`,
+    unlistedSelections: (count: number) =>
+      `${count} more selected that this list does not show.`,
+    noMatches: 'Nothing matches that.',
+    clear: 'Clear',
+    done: 'Done',
   },
 
   dashboard: {
@@ -84,6 +90,19 @@ export const strings = {
       unavailable:
         'Daily order-value trend is not available from the server yet.',
     },
+    /** FR-32 to FR-35 — the live-offers strip, beside the recent-orders one. */
+    offers: {
+      title: 'Offers',
+      subtitle: 'Live across the network right now',
+      empty: 'No offers are live right now.',
+      /**
+       * Distinct from `empty`: "nothing is running" and "we could not ask" look
+       * identical on a blank strip and mean opposite things.
+       */
+      unavailable: 'Offers could not be loaded.',
+    },
+    actionAllOffers: 'All offers',
+
     recentOrders: 'Recent orders',
     recent: {
       subtitle: 'Across the network, last 7 days',
@@ -450,6 +469,20 @@ export const strings = {
       hours > 0 ? `${hours}h lead time` : 'Next-day delivery',
     itemCount: (count: number) => `${count} priced item${count === 1 ? '' : 's'}`,
 
+    /** Copy for the FR-5 product cards. */
+    card: {
+      sku: (sku: string) => `SKU ${sku}`,
+      uncategorised: 'Uncategorised',
+      perUnit: (unit: string) => `per ${unit}`,
+      moq: (quantity: string, unit: string) => `Min ${quantity} ${unit}`,
+      pack: (size: string) => `Packs of ${size}`,
+      availability: 'Availability',
+      edit: 'Edit',
+      /** Shown under a card an admin has already deactivated (FR-15). */
+      inactiveNote: 'Hidden from new orders.',
+      unavailableNote: 'Withdrawn for one or more dates.',
+    },
+
     emptyProducts: 'No products match these filters.',
     emptyCategories: 'No categories yet. Add one before creating products.',
     emptyPriceLists: 'No price lists yet.',
@@ -677,6 +710,244 @@ export const strings = {
     holidayNameHint: 'e.g. Diwali, kitchen maintenance',
     deliveriesLabel: 'Deliveries on this day',
     istNote: 'Every time here is IST.',
+  },
+
+  /**
+   * FR-32 to FR-35 — offer authoring.
+   *
+   * Three strings in here are the screen's real subject rather than its
+   * decoration. An admin who believes that a start date publishes an offer,
+   * that a region reaches shops, or that a redemption count means anything will
+   * each make a decision the network cannot honour, so each is said on the
+   * screen where the decision is made rather than filed in a document.
+   */
+  adminOffers: {
+    title: 'Offers',
+    subtitle: 'What the network is being offered, and who it reaches.',
+    newOffer: 'New offer',
+
+    tabs: {
+      all: 'All',
+      active: 'Live',
+      scheduled: 'Scheduled',
+      expired: 'Expired',
+      withdrawn: 'Withdrawn',
+    },
+
+    /* ---- What this backend does not do. Said before anything is published. */
+
+    limitsTitle: 'Before you publish',
+    limitsSubtitle: 'What this system does not do on its own.',
+
+    /** FR-33 — `OfferRegion` exists; nothing can ever match it to a shop. */
+    noRegionTargeting:
+      'There is no region targeting. An offer goes to the whole network or to shops you name, one by one. Shops carry a city and a state but no region, and the offer list never matches on one, so a region would reach nobody — the picker is absent rather than present and inert.',
+
+    /** FR-33 / G22 — `status` is only ever changed by hand. */
+    schedulingDoesNotPublish:
+      'A start date is a note, not a trigger. Nothing puts an offer live when its start date arrives, and nothing ends one when its end date passes. Publish and expire them here, or they stay exactly as you left them.',
+
+    /** FR-34 — a NEW_OFFER notification type exists; nothing creates one. */
+    noPublishNotification:
+      'Publishing tells nobody. There is a notification type for a new offer and nothing ever creates one, and no push or SMS is wired up at all, so a shop finds out by opening the app.',
+
+    /** FR-35 / G20 — the pricer never reads an offer. */
+    redemptionsAlwaysZero:
+      'Redemptions stay at zero. Order pricing applies no discount and never reads an offer, so nothing counts one. The figure is shown because it is what the server holds, not because it is a result.',
+
+    /* ---- The list */
+
+    empty: 'No offers yet.',
+    emptyMessage: 'Compose one to put it in front of the network.',
+    emptyFiltered: 'Nothing in this tab.',
+    emptyFilteredMessage: 'Offers move between these tabs only when you move them.',
+
+    /** The state that actually costs something: live, and past its end date. */
+    strandedLiveTitle: (count: number) =>
+      count === 1
+        ? 'One live offer is past its end date'
+        : `${count} live offers are past their end date`,
+    strandedLiveMessage:
+      'Shops still see these on their home screen, on terms that have ended. Nothing will pull them for you — open one and expire it.',
+    strandedScheduledTitle: (count: number) =>
+      count === 1
+        ? 'One scheduled offer should have started'
+        : `${count} scheduled offers should have started`,
+    strandedScheduledMessage:
+      'Their start dates have passed and no shop can see them. Open one and publish it.',
+    strandedScope: 'Counted across this page only.',
+
+    /* ---- The card */
+
+    viewDetails: 'View Details',
+    validTill: (date: string) => `Valid till ${date}`,
+
+    /**
+     * The pill at the head of a card. The reference puts a category word there
+     * — "BULK ORDER", "LIMITED" — and no such field exists on an offer. The
+     * discount shape fills the slot and is always real.
+     */
+    badge: {
+      percentage: (value: string) => `${value}% OFF`,
+      flat: 'FLAT DISCOUNT',
+      buyXGetY: (buy: number, get: number) => `BUY ${buy} GET ${get}`,
+    },
+
+    /* ---- One offer */
+
+    detailTitle: 'Offer',
+    descriptionHeading: 'Description',
+    noDescription: 'No description was written for this offer.',
+
+    applicableProductsHeading: 'Applicable products',
+    wholeCatalogueRow: 'Every product in the catalogue',
+    /** The picker reads one page of the catalogue; an offer can outlive that. */
+    productsUnresolved: (count: number) =>
+      `${count} more ${
+        count === 1 ? 'product is' : 'products are'
+      } named on this offer but not on the page of the catalogue loaded here.`,
+    /** FR-6 — the base price is not what any particular shop pays. */
+    basePriceNote:
+      'Base prices. What a shop actually pays comes from its price list, so the discount lands on a different number for different shops.',
+
+    termsHeading: 'Terms',
+    /** No free-text terms field exists, so nothing here is authored. */
+    termsDerived:
+      'Read off the offer itself. The backend stores no terms beyond the description above, so there is nothing else to show and nothing here was written by hand.',
+    termWindow: (from: string, to: string) => `Runs ${from} to ${to}, IST.`,
+    termProductsAll: 'Applies across the whole catalogue.',
+    termProductsSome: (count: number) =>
+      `Applies to ${count} named ${count === 1 ? 'product' : 'products'} only.`,
+    termTargetAll: 'Every shop in the network can see it.',
+    termTargetSome: (count: number) =>
+      `Only the ${count} named ${count === 1 ? 'shop' : 'shops'} can see it.`,
+    termTargetNobody: 'No shop can see it: it names none and is not network-wide.',
+    /** G20, said the way it will actually reach a shop. */
+    termNotAutoApplied:
+      'The discount never reaches a shop order total. Order pricing does not read offers, so it has to be applied when the invoice is raised.',
+    windowLabel: 'Runs',
+    window: (from: string, to: string) => `${from} to ${to}`,
+    startsOn: (date: string) => `Starts ${date}`,
+    endedOn: (date: string) => `Ended ${date}`,
+    endsOn: (date: string) => `Ends ${date}`,
+    pastEndDate: 'Past its end date and still live.',
+    startDatePassed: 'Its start date has passed and it is not live.',
+
+    termsTitle: 'The offer',
+    targetingTitle: 'Who sees it',
+    allShops: 'Every shop in the network',
+    namedShops: (count: number) =>
+      count === 1 ? '1 shop, named on the offer' : `${count} shops, named on the offer`,
+    reachesNobody:
+      'This offer names no shops and is not network-wide, so no shop can see it. Targeting cannot be edited, so it has to be withdrawn and composed again.',
+    regionsNamed: (count: number) =>
+      `It also names ${count} ${count === 1 ? 'region' : 'regions'}, which reach no shop.`,
+    productsAll: 'The whole catalogue',
+    productsSome: (count: number) =>
+      count === 1 ? '1 product' : `${count} products`,
+
+    /* ---- FR-35 reach */
+
+    reachTitle: 'Reach',
+    reachSubtitle: 'What the server has counted.',
+    views: 'Opens',
+    viewsCaption:
+      'Counted when a shop opens this offer from its home screen or a notification. Browsing the offers list is not counted, so this is a floor rather than a total.',
+    redemptions: 'Redemptions',
+    redemptionsCaption: 'Structurally zero — see below.',
+    notReported: 'Not reported',
+    notReportedCaption:
+      'The payload did not carry this counter, which is not the same as it being zero.',
+
+    /* ---- Actions */
+
+    edit: 'Edit offer',
+    publishNow: 'Publish now',
+    expireNow: 'Expire now',
+    withdraw: 'Withdraw',
+
+    publishTitle: 'Put this offer live?',
+    publishMessage:
+      'Every targeted shop sees it from now until you expire it. Its start date changes nothing on its own.',
+    published: 'Offer is live.',
+
+    expireTitle: 'End this offer?',
+    expireMessage:
+      'It comes off every shop home screen straight away. You can put it back later by publishing it again from here.',
+    expired: 'Offer expired.',
+
+    withdrawTitle: 'Withdraw this offer?',
+    withdrawMessage:
+      'It comes off every shop home screen straight away, and nothing tells the shops it has gone. You can put it back later by publishing it again from here.',
+    withdrawReasonLabel: 'Reason',
+    withdrawReasonPlaceholder: 'Why it is being pulled',
+    /** The endpoint takes the reason and stores it nowhere. Verified, not assumed. */
+    withdrawReasonNotKept:
+      'The reason is sent but not kept: there is no column for it, and the audit log records only the offer itself. Write it down elsewhere if it matters.',
+    withdrawn: 'Offer withdrawn.',
+
+    /* ---- The composer */
+
+    composeTitle: 'New offer',
+    editTitle: 'Edit offer',
+    createdLive: 'Offer created and live.',
+    createdScheduled:
+      'Offer created. It is scheduled — publish it when you want shops to see it.',
+    updated: 'Offer updated.',
+
+    titleLabel: 'Title',
+    titlePlaceholder: 'What the shop sees first',
+    descriptionLabel: 'Description',
+    descriptionPlaceholder: 'The terms, in a sentence',
+    bannerLabel: 'Banner image URL',
+    bannerHint: 'Optional. Must be a full https:// address — the server rejects a path.',
+    bannerError: 'Enter a full http:// or https:// address, or leave it empty.',
+
+    discountTypeLabel: 'Discount',
+    discountTypes: {
+      percentage: 'Percentage off',
+      flat: 'Flat amount off',
+      buyXGetY: 'Buy X, get Y',
+    },
+    percentageLabel: 'Percent off',
+    percentageError: 'Enter a percentage between 0 and 100.',
+    flatLabel: 'Amount off',
+    flatError: 'Enter an amount of 0 or more.',
+    buyLabel: 'Buy quantity',
+    getLabel: 'Free quantity',
+    quantityError: 'Enter a whole number of 1 or more.',
+
+    startLabel: 'Starts',
+    endLabel: 'Ends',
+    dateHint: 'YYYY-MM-DD',
+    dateError: 'Enter a real date as YYYY-MM-DD.',
+    endBeforeStartError: 'The end date cannot be before the start date.',
+    startsTodayNote: 'Starting today or earlier publishes it immediately.',
+    startsLaterNote:
+      'A future start date creates the offer as scheduled. It stays invisible until you publish it.',
+
+    targetLabel: 'Send it to',
+    targetAll: 'Every shop',
+    targetSelected: 'Shops I name',
+    shopsLabel: 'Shops',
+    shopsEmpty: 'No shops named',
+    shopsError: 'Name at least one shop, or send it to every shop.',
+    shopsTruncated: (count: number) =>
+      `Showing the first ${count} shops. A shop beyond that cannot be named here.`,
+
+    productsLabel: 'Applies to',
+    productsEmpty: 'The whole catalogue',
+    productsHint:
+      'Leave empty for the whole catalogue. Named products also get an offer badge on the shop catalogue.',
+    productsTruncated: (count: number) =>
+      `Showing the first ${count} products. A product beyond that cannot be named here.`,
+
+    /** PATCH takes no targeting or product fields — verified against the schema. */
+    targetingFixed:
+      'Targeting and products are set when an offer is created and cannot be changed afterwards: the update endpoint does not accept them. To change either, withdraw this offer and compose a new one.',
+
+    saveOffer: 'Publish offer',
+    saveChanges: 'Save changes',
   },
 
   shopTabs: {
