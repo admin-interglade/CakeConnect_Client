@@ -6,6 +6,7 @@
  *
  *   dashboard/   -> services/api/dashboard.api.ts
  *   shops/       -> services/admin/shops.api.ts, ledger.api.ts, payments.api.ts
+ *   owners/      -> services/admin/owners.api.ts
  *   catalogue/   -> services/admin/products.api.ts, categories.api.ts, priceLists.api.ts
  *   cutoff/      -> services/admin/cutoff.api.ts
  *   offers/      -> services/admin/offers.api.ts
@@ -33,6 +34,16 @@ export {
 } from './shops/useShops';
 export { default as useShopDetails, usePriceLists } from './shops/useShopDetails';
 export { default as useShopMutations } from './shops/useShopMutations';
+
+/* Shop owners — FR-2 */
+export {
+  default as useShopOwners,
+  useShopOwnerDetails,
+  useShopOwnerOptions,
+  useAvailableShops,
+  defaultOwnerPagination,
+} from './owners/useShopOwners';
+export { default as useOwnerMutations } from './owners/useOwnerMutations';
 
 /* Catalogue — FR-5, FR-6, FR-15 */
 export {

@@ -16,6 +16,7 @@ import Dropdown, { type DropdownOption } from './Dropdown';
 import Icon from '../ui/Icon';
 import InlineMessage from '../ui/InlineMessage';
 import LabeledInput from './LabeledInput';
+import MultiSelect from './MultiSelect';
 import {
   borderRadius,
   colors,
@@ -25,7 +26,14 @@ import {
   strings,
 } from '../../constants';
 
-export type FormFieldType = 'text' | 'tel' | 'email' | 'number' | 'textarea' | 'select';
+export type FormFieldType =
+  | 'text'
+  | 'tel'
+  | 'email'
+  | 'number'
+  | 'textarea'
+  | 'select'
+  | 'multiselect';
 
 export type FormField = {
   name: string;
@@ -35,13 +43,30 @@ export type FormField = {
   placeholder?: string;
   /** Shown under the field when there is no error. */
   hint?: string;
-  /** Required for `select`. */
+  /** Required for `select` and `multiselect`. */
   options?: DropdownOption<string>[];
+  /** `multiselect` only — shows the picker is still loading its options. */
+  loading?: boolean;
   /** Field-specific rule; return the message to show, or undefined when valid. */
   validate?: (value: string, values: FormValues) => string | undefined;
 };
 
+/**
+ * One string per field, whatever the field's type.
+ *
+ * A `multiselect` holds its ids comma-separated, which keeps the whole form a
+ * flat `Record<string, string>` — every existing caller, validator and
+ * `initialValues` object keeps working. `splitValues` and `joinValues` below
+ * are the only places that know it, so no screen parses the encoding by hand.
+ */
 export type FormValues = Record<string, string>;
+
+/** Read a `multiselect` field's value; '' is no selection, not one empty id. */
+export const splitValues = (value: string): string[] =>
+  value ? value.split(',').filter(Boolean) : [];
+
+/** Write a `multiselect` field's value. */
+export const joinValues = (values: string[]): string => values.join(',');
 
 type ModalFormProps = {
   visible: boolean;
@@ -180,6 +205,28 @@ export default function ModalForm({
             {fields.map(field => {
               const value = values[field.name] ?? '';
               const error = errors[field.name];
+
+              if (field.type === 'multiselect') {
+                return (
+                  <View key={field.name} style={styles.field}>
+                    <MultiSelect
+                      label={`${field.label}${field.required ? ' *' : ''}`}
+                      values={splitValues(value)}
+                      options={field.options ?? []}
+                      onChange={next => setValue(field, joinValues(next))}
+                      emptyLabel={field.placeholder}
+                      note={field.hint}
+                      loading={field.loading}
+                      testID={`form-${field.name}`}
+                    />
+                    {error ? (
+                      <InlineMessage tone="error" style={styles.fieldMessage}>
+                        {error}
+                      </InlineMessage>
+                    ) : null}
+                  </View>
+                );
+              }
 
               if (field.type === 'select') {
                 return (

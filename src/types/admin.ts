@@ -48,6 +48,13 @@ export type Shop = {
   id: string;
   name: string;
   code: string;
+  /**
+   * FR-2 — the owner account this shop belongs to, absent while the shop is
+   * unclaimed. It is what makes a shop "available" to hand to a new owner, so
+   * it is carried on the domain type rather than inferred from `ownerName`,
+   * which a create can fill in without ever linking an account.
+   */
+  ownerId?: string;
   ownerName: string;
   ownerPhone: string;
   ownerEmail?: string;
@@ -91,8 +98,18 @@ export type CreditBehavior = 'warn' | 'blockOrder';
 export type ShopInput = {
   name: string;
   code: string;
-  ownerName: string;
-  ownerPhone: string;
+  /**
+   * FR-2 — the owner account this shop is created under, or absent for a shop
+   * created without one.
+   *
+   * Both are optional because the shop form picks an existing owner rather
+   * than typing a new one: they are either copied from the chosen account or
+   * not sent, and an unowned shop is a real state — it is what makes the shop
+   * available to assign from an owner's profile. Never a typed pair; see
+   * `toApiShopCreate` for why an invented number is dangerous here.
+   */
+  ownerName?: string;
+  ownerPhone?: string;
   ownerEmail?: string;
   /** The shop's own line, which `POST /shops` requires separately. */
   mobileNumber: string;
@@ -124,6 +141,74 @@ export type ShopUpdateOutcome = {
   shop: Shop;
   saved: ShopUpdatePart[];
   failed: { part: ShopUpdatePart; message: string }[];
+};
+
+/* -------------------------------------------------------------------------- */
+/* Shop owners — FR-2                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A shop-owner account's lifecycle. `invited` is the state between the admin
+ * creating the account and the owner completing their first sign-in; the
+ * backend does not write it yet (see docs/api-gaps.md G26), so nothing in the
+ * app produces it, but the codec accepts it so the screens do not have to
+ * change when the invite flow lands.
+ */
+export type ShopOwnerStatus = 'active' | 'invited' | 'suspended' | 'inactive';
+
+/** Just enough of a shop to name it in an assignment list or an error. */
+export type AssignedShopSummary = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+/** FR-2 — the account an outlet signs in with, and the outlets it can act on. */
+export type ShopOwner = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  status: ShopOwnerStatus;
+  /**
+   * Empty on list rows: `GET /users` returns no shop association, only
+   * `GET /users/:id` does. An empty array on a list row therefore means "not
+   * loaded here", which is why the list does not report a shop count.
+   */
+  shops: AssignedShopSummary[];
+  createdAt: string;
+};
+
+/** The write shape for FR-2 owner creation. */
+export type ShopOwnerInput = {
+  name: string;
+  phone: string;
+  email?: string;
+  /**
+   * The shops to hand over. Full summaries rather than ids: each shop is a
+   * separate assign call, and a failed one has to be named back to the admin.
+   */
+  shops: AssignedShopSummary[];
+};
+
+/**
+ * Assigning shops fans out to one `POST /shops/:id/assign-owner` per shop, so
+ * it can half-succeed. As with `ShopUpdateOutcome`, the caller is told exactly
+ * which shops landed rather than a single pass/fail — otherwise an admin cannot
+ * know which ones to retry.
+ */
+export type ShopAssignmentOutcome = {
+  assigned: AssignedShopSummary[];
+  failed: { shop: AssignedShopSummary; message: string }[];
+};
+
+/**
+ * Creating an owner is a create plus those assignments. The owner is returned
+ * even when every assignment failed: the account exists at that point, and
+ * telling the admin otherwise would have them create a duplicate.
+ */
+export type ShopOwnerCreationOutcome = ShopAssignmentOutcome & {
+  owner: ShopOwner;
 };
 
 /** FR-39 — an adjustment moves the balance; a credit note reduces it. */

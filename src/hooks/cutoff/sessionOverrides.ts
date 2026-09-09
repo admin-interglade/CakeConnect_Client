@@ -72,11 +72,6 @@ export function rememberDateOverride(date: string, cutoffTime: string) {
   });
 }
 
-/** Test seam; the app has no "forget what I saved" gesture. */
-export function forgetSessionOverrides() {
-  publish(EMPTY);
-}
-
 export function useSessionOverrides(): SessionOverrides {
   return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

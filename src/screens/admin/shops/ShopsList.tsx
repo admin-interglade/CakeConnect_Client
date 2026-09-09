@@ -21,7 +21,13 @@ import {
   type DropdownOption,
 } from '../../../components';
 import { colors, spacing, strings } from '../../../constants';
-import { defaultPagination, defaultShopFilters, useShopMutations, useShops } from '../../../hooks';
+import {
+  defaultPagination,
+  defaultShopFilters,
+  usePermissions,
+  useShopMutations,
+  useShops,
+} from '../../../hooks';
 import { formatCurrencyCompact } from '../../../utils/format';
 import type { AdminShopsStackParamList } from '../../../navigation/types';
 import type { Pagination as PaginationState, Shop, ShopFilters, ShopStatus } from '../../../types/admin';
@@ -75,6 +81,10 @@ export default function ShopsList() {
   } = useShops(filters, pagination);
 
   const { changeStatus } = useShopMutations();
+
+  // FR-2 — creating an owner account and assigning shops to it are ADMIN-only
+  // on the server, so support staff are not offered a button that can only 403.
+  const { canManageShops } = usePermissions();
 
   /** Any filter change resets to page 1, or the user lands on an empty page. */
   const updateFilters = (partial: Partial<ShopFilters>) => {
@@ -218,6 +228,12 @@ export default function ShopsList() {
 
   return (
     <Screen>
+      {/*
+        Two actions, which is the maximum `ScreenHeader` lays out: add a shop,
+        and hand shops to an owner. They are the two halves of FR-2 — a shop
+        created here carries an owner's name but no account, so the second
+        action is what actually lets someone sign in and order.
+      */}
       <ScreenHeader
         title={strings.shops.title}
         actions={[
@@ -226,6 +242,16 @@ export default function ShopsList() {
             label: strings.shops.add,
             onPress: () => navigation.navigate('ShopDetails', { mode: 'create' }),
           },
+          ...(canManageShops
+            ? [
+                {
+                  icon: 'account-plus-outline',
+                  label: strings.owners.add,
+                  onPress: () =>
+                    navigation.navigate('OwnerProfile', { mode: 'create' as const }),
+                },
+              ]
+            : []),
         ]}
       />
 

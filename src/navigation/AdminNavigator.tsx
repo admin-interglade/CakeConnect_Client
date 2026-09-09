@@ -8,6 +8,7 @@ import {
 import AdminDashboard from '../screens/admin/dashboard/AdminDashboard';
 import ShopsList from '../screens/admin/shops/ShopsList';
 import ShopDetails from '../screens/admin/shops/ShopDetails';
+import OwnerProfile from '../screens/admin/shops/OwnerProfile';
 
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
@@ -85,6 +86,7 @@ function ShopsStack() {
     <ShopsStackNav.Navigator screenOptions={stackOptions}>
       <ShopsStackNav.Screen name="ShopsList" component={ShopsList} />
       <ShopsStackNav.Screen name="ShopDetails" component={ShopDetails} />
+      <ShopsStackNav.Screen name="OwnerProfile" component={OwnerProfile} />
       <ShopsStackNav.Screen name="OrderDetails" component={OrderDetails} />
       <ShopsStackNav.Screen name="ShortSupply" component={ShortSupply} />
     </ShopsStackNav.Navigator>

@@ -41,6 +41,7 @@ import {
   usePriceLists,
   useShopDetails,
   useShopMutations,
+  useShopOwnerOptions,
 } from '../../../hooks';
 import { defaultRange } from '../../../utils/dateRange';
 import {
@@ -67,6 +68,15 @@ type ShopDetailsNavigation = StackNavigationProp<AdminShopsStackParamList, 'Shop
 type ShopDetailsRoute = RouteProp<AdminShopsStackParamList, 'ShopDetails'>;
 
 type DetailTab = 'overview' | 'orders' | 'ledger' | 'payments';
+
+/**
+ * The owner field's "nobody yet" answer, and its default.
+ *
+ * A non-empty sentinel rather than '': an empty select reads as "not answered",
+ * and leaving a shop unowned is a deliberate answer — it is what puts the shop
+ * in `OwnerProfile`'s list of shops available to assign.
+ */
+const NO_OWNER = 'none';
 
 /**
  * FR-2 / FR-39 shop detail.
@@ -106,6 +116,7 @@ export default function ShopDetails() {
   } = useShopDetails(shopId, range);
 
   const priceLists = usePriceLists();
+  const ownerOptions = useShopOwnerOptions();
   const { create, update, changeStatus, addAdjustment } = useShopMutations();
 
   // PRD §3 — support staff work the order queue without financial controls.
@@ -116,6 +127,7 @@ export default function ShopDetails() {
   // Arriving with mode "edit" opens the form, but only once the shop has
   // loaded — opening earlier would seed every field from an undefined shop.
   const openedForEdit = React.useRef(false);
+  console.log('ShopDetails params:', params);
   React.useEffect(() => {
     if (params?.mode === 'edit' && shop && !openedForEdit.current) {
       openedForEdit.current = true;
@@ -123,22 +135,66 @@ export default function ShopDetails() {
     }
   }, [params?.mode, shop]);
 
+  /*
+   * FR-2 — who this shop belongs to.
+   *
+   * This form picks an owner; it never creates one. `POST /shops` resolves the
+   * owner from `ownerMobileNumber` alone — a number that matches an existing
+   * user links that account and discards any name sent beside it, and a number
+   * that matches nothing silently creates a *new* owner. A typed pair therefore
+   * decided, invisibly and on one digit, between linking someone and minting a
+   * duplicate of them. Only accounts that already exist are offered here, and
+   * picking one sends that owner's own recorded number, so the link is exact.
+   *
+   * Creating an owner lives on `OwnerProfile`, which is the screen that can do
+   * it properly — it names the account, records the email, and assigns several
+   * shops at once.
+   *
+   * The field is optional. A shop with no owner is a legitimate, useful state:
+   * it is exactly what `OwnerProfile` lists as "available", so leaving it unset
+   * here is how a shop reaches that picker. `POST /shops` agrees — both owner
+   * fields are optional on its schema.
+   *
+   * Edit mode has no owner field at all: `PATCH /shops/:id` carries none, so
+   * anything shown here would be a control that silently changes nothing.
+   * Ownership after creation is settled on the owner's profile.
+   */
+  const ownerListNotice = ownerOptions.isError
+    ? strings.shopDetails.owner.unavailable
+    : undefined;
+
+  const ownerFields = React.useMemo<FormField[]>(() => {
+    if (!isCreateMode) {
+      return [];
+    }
+
+    return [
+      {
+        name: 'ownerId',
+        label: strings.shopDetails.fields.ownerAccount,
+        type: 'select',
+        hint: ownerOptions.truncated
+          ? strings.shopDetails.owner.truncated
+          : strings.shopDetails.owner.pickHint,
+        options: [
+          { value: NO_OWNER, label: strings.shopDetails.owner.noneOption },
+          ...ownerOptions.owners.map(owner => ({
+            value: owner.id,
+            label: owner.name,
+            // The number the backend matches on, so the admin can tell two
+            // owners of the same name apart before choosing.
+            meta: owner.phone,
+          })),
+        ],
+      },
+    ];
+  }, [isCreateMode, ownerOptions.owners, ownerOptions.truncated]);
+
   const shopFields = React.useMemo<FormField[]>(
     () => [
       { name: 'name', label: strings.shopDetails.fields.name, type: 'text', required: true },
       { name: 'code', label: strings.shopDetails.fields.code, type: 'text', required: true },
-      {
-        name: 'ownerName',
-        label: strings.shopDetails.fields.ownerName,
-        type: 'text',
-        required: true,
-      },
-      {
-        name: 'ownerPhone',
-        label: strings.shopDetails.fields.ownerPhone,
-        type: 'tel',
-        required: true,
-      },
+      ...ownerFields,
       { name: 'ownerEmail', label: strings.shopDetails.fields.ownerEmail, type: 'email' },
       {
         // POST /shops requires the shop's own line, separately from the owner's.
@@ -185,15 +241,17 @@ export default function ShopDetails() {
         options: priceLists.map(list => ({ value: list.id, label: list.name })),
       },
     ],
-    [priceLists],
+    [priceLists, ownerFields],
   );
 
   const initialValues: FormValues = React.useMemo(
     () => ({
       name: shop?.name ?? '',
       code: shop?.code ?? '',
-      ownerName: shop?.ownerName ?? '',
-      ownerPhone: shop?.ownerPhone ?? '',
+      // Only the create form carries this; an existing shop's owner is not
+      // editable here, so it seeds to the shop's own account for completeness
+      // and is never sent.
+      ownerId: shop?.ownerId ?? NO_OWNER,
       ownerEmail: shop?.ownerEmail ?? '',
       mobileNumber: shop?.ownerPhone ?? '',
       address: shop?.address ?? '',
@@ -207,22 +265,38 @@ export default function ShopDetails() {
     [shop, priceLists],
   );
 
-  const toInput = (values: FormValues): ShopInput => ({
-    name: values.name.trim(),
-    code: values.code.trim(),
-    ownerName: values.ownerName.trim(),
-    ownerPhone: values.ownerPhone.replace(/\D/g, ''),
-    ownerEmail: values.ownerEmail.trim() || undefined,
-    mobileNumber: values.mobileNumber.replace(/\D/g, ''),
-    address: values.address.trim(),
-    city: values.city.trim() || undefined,
-    state: values.state.trim() || undefined,
-    pincode: values.pincode.trim() || undefined,
-    gstin: values.gstin.trim().toUpperCase() || undefined,
-    creditLimit: Number(values.creditLimit),
-    creditBehavior: values.creditBehavior === 'blockOrder' ? 'blockOrder' : 'warn',
-    priceListId: values.priceListId,
-  });
+  const toInput = (values: FormValues): ShopInput => {
+    /*
+     * The owner comes from the chosen account, never from typed text: their
+     * recorded number is the only thing `POST /shops` matches on, so re-keying
+     * it by hand — one transposed digit — would quietly create a second
+     * account for the same person instead of linking the one picked.
+     *
+     * Nobody picked means no owner is sent at all, which the create endpoint
+     * reads as "unowned" rather than as a blank name.
+     */
+    const picked =
+      values.ownerId && values.ownerId !== NO_OWNER
+        ? ownerOptions.owners.find(owner => owner.id === values.ownerId)
+        : undefined;
+
+    return {
+      name: values.name.trim(),
+      code: values.code.trim(),
+      ownerName: picked?.name,
+      ownerPhone: picked?.phone,
+      ownerEmail: values.ownerEmail.trim() || undefined,
+      mobileNumber: values.mobileNumber.replace(/\D/g, ''),
+      address: values.address.trim(),
+      city: values.city.trim() || undefined,
+      state: values.state.trim() || undefined,
+      pincode: values.pincode.trim() || undefined,
+      gstin: values.gstin.trim().toUpperCase() || undefined,
+      creditLimit: Number(values.creditLimit),
+      creditBehavior: values.creditBehavior === 'blockOrder' ? 'blockOrder' : 'warn',
+      priceListId: values.priceListId,
+    };
+  };
 
   const submitShop = (values: FormValues) => {
     const input = toInput(values);
@@ -310,6 +384,7 @@ export default function ShopDetails() {
           initialValues={initialValues}
           submitLabel={strings.shops.add}
           submitting={create.isPending}
+          errorMessage={ownerListNotice}
           onSubmit={submitShop}
           onDismiss={() => {
             setFormOpen(false);
@@ -712,6 +787,7 @@ export default function ShopDetails() {
         fields={shopFields}
         initialValues={initialValues}
         submitting={update.isPending}
+        errorMessage={ownerListNotice}
         onSubmit={submitShop}
         onDismiss={() => setFormOpen(false)}
       />

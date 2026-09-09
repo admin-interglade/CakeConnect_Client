@@ -53,6 +53,18 @@ export const queryKeys = {
     regions: ['shops', 'regions'] as const,
   },
 
+  /**
+   * FR-2 — shop-owner accounts. Sibling of `shops` rather than a branch of it:
+   * assigning a shop changes both trees, so a mutation invalidates the two
+   * explicitly instead of one implying the other.
+   */
+  owners: {
+    all: ['owners'] as const,
+    list: (search: string, pagination: Pagination) =>
+      ['owners', 'list', search, pagination.page, pagination.limit] as const,
+    detail: (ownerId: string) => ['owners', 'detail', ownerId] as const,
+  },
+
   catalogue: {
     all: ['catalogue'] as const,
     products: (filters: ProductFilters, pagination: Pagination) =>

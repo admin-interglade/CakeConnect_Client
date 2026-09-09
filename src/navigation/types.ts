@@ -166,6 +166,12 @@ export type AdminDashboardStackParamList = {
 export type AdminShopsStackParamList = {
   ShopsList: undefined;
   ShopDetails: { shopId?: string; mode?: 'view' | 'edit' | 'create' };
+  /**
+   * FR-2 — a shop-owner account and the outlets assigned to it. Without an
+   * `ownerId` it opens the create form; a create replaces itself with the
+   * view, so backing out of it returns to the list and not to a spent form.
+   */
+  OwnerProfile: { ownerId?: string; mode?: 'view' | 'create' } | undefined;
   /** Reached from a shop's order history. */
   OrderDetails: { orderId: string };
   /** FR-40 — pushed from an order that cannot be fulfilled in full. */
