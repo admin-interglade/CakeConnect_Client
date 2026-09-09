@@ -4,6 +4,7 @@ import type {
   DeliveryStatus,
   OrderFilters,
   OrderStatus,
+  ShopOwnerStatus,
   ShopStatus,
 } from '../../types/admin';
 import type {
@@ -176,6 +177,31 @@ export const userRoleCodec = createEnumCodec<UserRole, ApiUserRole>('user role',
   shopOwner: 'SHOP_OWNER',
   supportStaff: 'SUPPORT_STAFF',
 });
+
+/* -------------------------------------------------------------------------- */
+/* User status — FR-2                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Separate from `ApiShopStatus`: a shop and the account that owns it are
+ * suspended independently, and `INVITED` exists only on the account.
+ *
+ * The backend's `UserStatus` enum is still `ACTIVE | SUSPENDED | INACTIVE` —
+ * `INVITED` is mapped here ahead of it (docs/api-gaps.md G26) so that when the
+ * invite flow lands, an invited owner renders as invited rather than throwing
+ * `UnknownEnumValueError` in the middle of the owners list.
+ */
+export type ApiUserStatus = 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'INACTIVE';
+
+export const userStatusCodec = createEnumCodec<ShopOwnerStatus, ApiUserStatus>(
+  'user status',
+  {
+    active: 'ACTIVE',
+    invited: 'INVITED',
+    suspended: 'SUSPENDED',
+    inactive: 'INACTIVE',
+  },
+);
 
 /* -------------------------------------------------------------------------- */
 /* Invoice status — FR-25                                                      */

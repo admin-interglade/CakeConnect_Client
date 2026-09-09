@@ -148,6 +148,59 @@ export const strings = {
     statusChanged: 'Shop status updated.',
   },
 
+  /* FR-2 — shop-owner accounts and the shops assigned to them. */
+  owners: {
+    add: 'Shop profile',
+    title: 'Shop profile',
+    createTitle: 'Assign shops to an owner',
+    createSubtitle: 'Create the owner account, then hand it its outlets.',
+    submit: 'Create owner',
+    sectionOwner: 'Owner',
+    sectionShops: 'Assigned shops',
+    assignTitle: 'Assign more shops',
+    assignAction: 'Assign shops',
+    fields: {
+      name: 'Owner name',
+      phone: 'Mobile number',
+      email: 'Email address',
+      shops: 'Shops to assign',
+    },
+    hints: {
+      phone: 'This is the number they sign in with.',
+      email: 'Used to reach the owner. No email is sent from here yet.',
+      shops: 'Only shops that no owner holds yet are listed.',
+    },
+    shopsPlaceholder: 'No shops selected',
+    shopsEmpty: 'Every shop already has an owner. Add a shop first.',
+    /* Distinct from `shopsEmpty`: an empty picker and an unreachable one look
+       identical and mean opposite things to whoever is assigning. */
+    shopsUnavailable:
+      'The shop list could not be loaded, so none can be assigned right now.',
+    shopsTruncated:
+      'More shops exist than this picker loads. Assign the rest from the owner once created.',
+    noShopsAssigned: 'This owner holds no shops yet.',
+    status: {
+      active: 'Active',
+      invited: 'Invited',
+      suspended: 'Suspended',
+      inactive: 'Inactive',
+    },
+    created: (name: string) => `${name} was created.`,
+    /*
+     * Says how the owner actually gets in. Nothing emails them an invite yet
+     * (docs/api-gaps.md G26), and promising one that never arrives leaves an
+     * owner waiting on a message instead of signing in.
+     */
+    signInHint: 'They sign in with their mobile number and an OTP.',
+    assigned: (count: number) =>
+      `${count} ${count === 1 ? 'shop' : 'shops'} assigned.`,
+    /* Assignments run one call per shop, so the toast names both halves. */
+    partialAssign: (assigned: string[], failed: string[]) =>
+      `${
+        assigned.length ? `Assigned ${assigned.join(', ')}. ` : ''
+      }Could not assign ${failed.join(', ')}. Try those again from the owner.`,
+  },
+
   shopDetails: {
     title: 'Shop profile',
     createTitle: 'Add new shop',
@@ -225,6 +278,7 @@ export const strings = {
     fields: {
       name: 'Shop name',
       code: 'Shop code',
+      ownerAccount: 'Owner',
       ownerName: 'Owner name',
       ownerPhone: 'Owner phone',
       ownerEmail: 'Owner email',
@@ -240,6 +294,21 @@ export const strings = {
       amount: 'Amount',
       reference: 'Reference',
       description: 'Description',
+    },
+    /* FR-2 — picking the owner when the shop is created. */
+    owner: {
+      noneOption: 'No owner yet',
+      /*
+       * Says where the two halves live. The shop form links an account that
+       * already exists; the owner profile is where one is created, and where
+       * an unowned shop is picked up afterwards — so leaving this unset is a
+       * route through the flow, not an omission.
+       */
+      pickHint: 'Choose an existing owner, or leave unset and assign one from Shop profile.',
+      truncated:
+        'More owners exist than this list loads. Assign the rest from Shop profile.',
+      unavailable:
+        'The owner list could not be loaded. The shop can be created without one and assigned later.',
     },
     /** FR-2 — a shop edit spans three endpoints and can half-succeed. */
     parts: {

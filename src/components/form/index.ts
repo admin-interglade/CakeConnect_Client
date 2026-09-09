@@ -13,6 +13,8 @@ export { default as DateRangePicker } from './DateRangePicker';
 export { default as QuantityStepper } from './QuantityStepper';
 export {
   default as ModalForm,
+  joinValues,
+  splitValues,
   type FormField,
   type FormFieldType,
   type FormValues,

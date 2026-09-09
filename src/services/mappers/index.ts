@@ -25,6 +25,7 @@ export {
   paymentStatusCodec,
   shopStatusCodec,
   userRoleCodec,
+  userStatusCodec,
   type ApiCreditBehavior,
   type ApiDateRangePeriod,
   type ApiDeliveryStatus,
@@ -37,6 +38,7 @@ export {
   type ApiPaymentStatus,
   type ApiShopStatus,
   type ApiUserRole,
+  type ApiUserStatus,
 } from './enums';
 
 export {
@@ -50,6 +52,7 @@ export {
   toDelivery,
   toPriceList,
   toShop,
+  toShopOwner,
   toTopProducts,
   type ApiAdminDashboard,
   type ApiAgeingRow,
@@ -62,6 +65,7 @@ export {
   type ApiPriceList,
   type ApiSalesReport,
   type ApiShop,
+  type ApiUser,
 } from './admin';
 
 export {

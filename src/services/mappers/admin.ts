@@ -10,6 +10,7 @@ import type {
   PriceList,
   Shop,
   ShopInput,
+  ShopOwner,
   TaxLine,
   TopProductPoint,
 } from '../../types/admin';
@@ -18,6 +19,7 @@ import {
   deliveryStatusCodec,
   orderStatusCodec,
   shopStatusCodec,
+  userStatusCodec,
 } from './enums';
 
 /**
@@ -97,6 +99,10 @@ export function toShop(api: ApiShop): Shop {
     id: api.id,
     name: api.shopName,
     code: api.shopCode,
+    // `ownerId` decides whether the shop can be handed to a new owner, so an
+    // absent one is left undefined rather than becoming ''. An empty string
+    // would read as "owned by nobody in particular" instead of "unowned".
+    ownerId: api.ownerId ?? api.owner?.id ?? undefined,
     ownerName: api.owner?.name ?? '',
     ownerPhone: api.owner?.mobileNumber ?? api.mobileNumber ?? '',
     ownerEmail: api.owner?.email ?? api.email ?? undefined,
@@ -126,6 +132,50 @@ export function toShop(api: ApiShop): Shop {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Shop owners — FR-2                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A `/users` row. `shopUsers` is returned by `GET /users/:id` only — the list
+ * route selects without it — which is why `toShopOwner` yields an empty `shops`
+ * array rather than throwing on a list row.
+ */
+export type ApiUser = {
+  id: string;
+  name: string;
+  mobileNumber: string;
+  email?: string | null;
+  role?: string;
+  status: string;
+  profileImage?: string | null;
+  createdAt?: string;
+  shopUsers?: Array<{
+    shopId?: string;
+    isPrimary?: boolean;
+    shop?: { id?: string; shopName?: string; shopCode?: string } | null;
+  }> | null;
+};
+
+export function toShopOwner(api: ApiUser): ShopOwner {
+  return {
+    id: api.id,
+    name: api.name,
+    phone: api.mobileNumber,
+    email: api.email ?? undefined,
+    status: userStatusCodec.fromApi(api.status),
+    shops: (api.shopUsers ?? []).flatMap(link => {
+      const id = link.shop?.id ?? link.shopId;
+      // A join row whose shop did not come back cannot be named on screen, and
+      // an id-only chip reading "—" is worse than one fewer chip.
+      return id && link.shop
+        ? [{ id, name: link.shop.shopName ?? '', code: link.shop.shopCode ?? '' }]
+        : [];
+    }),
+    createdAt: toApiDateOnly(api.createdAt),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Shop write payloads — FR-2                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -138,8 +188,16 @@ export function toShop(api: ApiShop): Shop {
 export const toApiShopCreate = (input: ShopInput) => ({
   shopCode: input.code,
   shopName: input.name,
-  ownerName: input.ownerName,
-  ownerMobileNumber: input.ownerPhone,
+  /*
+   * Omitted entirely when the shop is created without an owner, never sent
+   * blank: `ownerMobileNumber` is validated as ten digits when present, so ''
+   * is a 400, and the service reads an absent number as "no owner" — which is
+   * exactly the intent. When it *is* sent it is an existing owner's recorded
+   * number, because that number is the only thing the service matches on: an
+   * unmatched one silently creates a second account for the same person.
+   */
+  ...(input.ownerName ? { ownerName: input.ownerName } : {}),
+  ...(input.ownerPhone ? { ownerMobileNumber: input.ownerPhone } : {}),
   mobileNumber: input.mobileNumber,
   ...(input.ownerEmail ? { email: input.ownerEmail } : {}),
   address: input.address,
