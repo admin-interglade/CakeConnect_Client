@@ -447,27 +447,6 @@ export function retryAfterSeconds(error: unknown): number | null {
 }
 
 /**
- * Field-level validation messages, keyed by the `path` the server reported, so
- * a form can put each complaint next to the input that caused it. Empty when
- * the failure was not a validation error.
- */
-export function fieldErrors(error: unknown): Record<string, string> {
-  const body = (error as AxiosError<ApiErrorBody>)?.response?.data;
-
-  if (!Array.isArray(body?.errors)) {
-    return {};
-  }
-
-  return body.errors.reduce<Record<string, string>>((map, entry) => {
-    // First complaint wins: a field showing one clear reason beats a list.
-    if (entry?.path && entry.message && !(entry.path in map)) {
-      map[entry.path] = entry.message;
-    }
-    return map;
-  }, {});
-}
-
-/**
  * Turns an axios failure into copy a franchise owner can act on. PRD §5 asks
  * for user-friendly error states; raw axios messages are not that.
  */

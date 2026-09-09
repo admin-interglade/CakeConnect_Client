@@ -43,7 +43,7 @@ export default function Skeleton({
   );
 }
 
-/** Stacked skeleton rows sized like a `DataTable` body. */
+/** Stacked skeleton rows sized like a list body. */
 export function SkeletonList({ rows = 5 }: { rows?: number }) {
   return (
     <View accessibilityLabel="Loading" accessible>
