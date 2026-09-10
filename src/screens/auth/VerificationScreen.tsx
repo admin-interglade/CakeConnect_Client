@@ -64,7 +64,13 @@ export default function VerificationScreen({ navigation, route }: Props) {
           fullName: result.fullName,
           email: result.email,
           shops: result.shops,
+          mustChangePassword: result.mustChangePassword,
         };
+
+        if (result.mustChangePassword) {
+          navigation.navigate('SetPassword', { session });
+          return;
+        }
 
         navigation.navigate(
           result.profileComplete ? 'Biometric' : 'Profile',

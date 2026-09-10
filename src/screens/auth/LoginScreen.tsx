@@ -75,7 +75,15 @@ export default function LoginScreen({ navigation }: Props) {
         fullName: result.fullName,
         email: result.email,
         shops: result.shops,
+        mustChangePassword: result.mustChangePassword,
       };
+
+      // First login with the emailed temporary password: the owner must
+      // choose their own password before entering the app.
+      if (result.mustChangePassword) {
+        navigation.navigate('SetPassword', { session });
+        return;
+      }
 
       // An account that has not finished onboarding still owes us a profile.
       navigation.navigate(result.profileComplete ? 'Biometric' : 'Profile', {

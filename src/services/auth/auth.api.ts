@@ -23,6 +23,8 @@ type ApiUser = {
   role: string;
   status: string;
   profileImage: string | null;
+  /** True only until the first-login password has been set. */
+  mustChangePassword?: boolean;
 };
 
 type ApiSession = {
@@ -67,6 +69,11 @@ export type AuthenticatedSession = {
    * real flag, this is the one place to change.
    */
   profileComplete: boolean;
+  /**
+   * First-login-after-credential-email flag: the app must show "set your
+   * password" (new + confirm) before the user can get into the app.
+   */
+  mustChangePassword: boolean;
   fullName?: string;
   email?: string;
   /** Display form, e.g. "+91 98765 43210". */
@@ -166,6 +173,7 @@ async function toSession(payload: ApiSession): Promise<AuthenticatedSession> {
     userId: payload.user.id,
     role,
     profileComplete: Boolean(fullName),
+    mustChangePassword: Boolean(payload.user.mustChangePassword),
     fullName,
     email: payload.user.email ?? undefined,
     phone: displayPhone(payload.user.mobileNumber),
@@ -282,4 +290,27 @@ export async function logoutSession(refreshToken: string | null): Promise<void> 
   } catch {
     // Deliberately swallowed — see above.
   }
+}
+
+/**
+ * `POST /auth/change-password` — set a new password.
+ *
+ * The backend skips the `currentPassword` check while the one-time password is
+ * still active (`mustChangePassword`), i.e. for the "set your password" step on
+ * first login. `currentPassword` is only sent by the caller when proof is due.
+ */
+export async function changeMyPassword(
+  newPassword: string,
+  currentPassword?: string,
+  authToken?: string,
+): Promise<{ ok: boolean }> {
+  await apiPost<null>(
+    '/auth/change-password',
+    {
+      ...(currentPassword ? { currentPassword } : {}),
+      newPassword,
+    },
+    { authToken },
+  );
+  return { ok: true };
 }

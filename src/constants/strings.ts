@@ -167,7 +167,8 @@ export const strings = {
     },
     hints: {
       phone: 'This is the number they sign in with.',
-      email: 'Used to reach the owner. No email is sent from here yet.',
+      email:
+        'A temporary password is emailed here. The owner sets their own on first login.',
       shops: 'Only shops that no owner holds yet are listed.',
     },
     shopsPlaceholder: 'No shops selected',
@@ -187,11 +188,12 @@ export const strings = {
     },
     created: (name: string) => `${name} was created.`,
     /*
-     * Says how the owner actually gets in. Nothing emails them an invite yet
-     * (docs/api-gaps.md G26), and promising one that never arrives leaves an
-     * owner waiting on a message instead of signing in.
+     * How the owner gets in. The temporary password is emailed at account
+     * creation; the first password login routes to the set-your-own-password
+     * step, so promising the mobile number alone here would be misleading.
      */
-    signInHint: 'They sign in with their mobile number and an OTP.',
+    signInHint:
+      'A temporary password was emailed to them — they set their own on first login.',
     assigned: (count: number) =>
       `${count} ${count === 1 ? 'shop' : 'shops'} assigned.`,
     /* Assignments run one call per shop, so the toast names both halves. */

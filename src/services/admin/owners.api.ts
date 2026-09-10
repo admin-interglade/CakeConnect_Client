@@ -21,12 +21,10 @@ import { toShopOwner, userRoleCodec, type ApiUser } from '../mappers';
  * (docs/api-gaps.md G26), so this module composes the same outcome from the
  * routes that do: one `POST /users` followed by one assign call per shop.
  *
- * Two consequences the UI must not paper over:
- *   - **no invite is sent.** Nothing here emails the owner, so no caller may
- *     claim one went out. The owner signs in with the mobile number recorded
- *     below, via OTP.
- *   - **the sequence is not atomic.** The account can be created and an
- *     assignment still fail, so writes report exactly which shops landed.
+ * The server emails the temporary password to the address recorded on the
+ * account, so the sequence here is also non-atomic: the account can be
+ * created and an assignment still fail, so writes report exactly which shops
+ * landed.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -96,12 +94,9 @@ export async function assignShopsToOwner(
 /**
  * FR-2 — create the owner account, then link the chosen shops to it.
  *
- * The account is created without a password: `POST /users` makes it optional,
- * and an admin-chosen password would either have to be read out to the owner or
- * be unknown to them. The owner signs in with their mobile number and an OTP
- * until the activation flow in `docs/prompts/shop-owner-onboarding.md` lands.
- *
- * A failure to create throws — there is no account to report on. A failure to
+ * The server generates a temporary password and emails it to the address on
+ * the account; the owner sets their own password on the first login. A failure
+ * to create throws — there is no account to report on. A failure to
  * assign does not: the account exists by then, and telling the admin the whole
  * thing failed would have them create a duplicate on the same mobile number,
  * which the server rejects with a 409.

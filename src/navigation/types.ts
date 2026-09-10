@@ -30,6 +30,8 @@ export type PendingSession = {
   photoUri?: string;
   /** FR-4 — every outlet this login can act on; empty for admin and support. */
   shops: AssignedShop[];
+  /** Set when the login was the first one with the emailed one-time password. */
+  mustChangePassword?: boolean;
 };
 
 export type AuthStackParamList = {
@@ -44,6 +46,8 @@ export type AuthStackParamList = {
     nationalNumber: string;
     resendAfterSeconds: number;
   };
+  /** First login with the emailed temp password: create your own password. */
+  SetPassword: { session: PendingSession };
   Profile: { session: PendingSession };
   Biometric: { session: PendingSession };
   AllSet: { session: PendingSession; biometricsEnabled: boolean };

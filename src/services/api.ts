@@ -366,8 +366,12 @@ export const apiGet = <T,>(
 ): Promise<T> =>
   request<T>({ method: 'GET', url, params, ...withAuth(options) });
 
-export const apiPost = <T,>(url: string, data?: unknown): Promise<T> =>
-  request<T>({ method: 'POST', url, data });
+export const apiPost = <T,>(
+  url: string,
+  data?: unknown,
+  options?: RequestOptions,
+): Promise<T> =>
+  request<T>({ method: 'POST', url, data, ...withAuth(options) });
 
 export const apiPatch = <T,>(url: string, data?: unknown): Promise<T> =>
   request<T>({ method: 'PATCH', url, data });
