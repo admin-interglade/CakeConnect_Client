@@ -177,12 +177,14 @@ export async function createDraftOrder(
   shopId: string,
   lines: CartLine[],
   notes?: string,
+  offerId?: string,
 ): Promise<Order> {
   return toOrder(
     await apiPost<ApiOrder>('/orders', {
       shopId,
       deliveryDate: nextDeliveryDate(),
       ...(notes ? { notes } : {}),
+      ...(offerId ? { offerId } : {}),
       items: toApiItems(lines),
     }),
   );
@@ -199,10 +201,12 @@ export async function updateDraftOrder(
   orderId: string,
   lines: CartLine[],
   notes?: string,
+  offerId?: string | null,
 ): Promise<Order> {
   return toOrder(
     await apiPatch<ApiOrder>(`/orders/${orderId}`, {
       ...(notes !== undefined ? { notes } : {}),
+      offerId: offerId ?? null,
       items: toApiItems(lines),
     }),
   );

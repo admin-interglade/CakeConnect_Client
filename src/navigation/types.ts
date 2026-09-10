@@ -157,14 +157,11 @@ export type AdminDashboardStackParamList = {
   /** FR-37 — the full consolidated plan; defaults to tomorrow's delivery. */
   ProductionPlan: { deliveryDate?: string } | undefined;
   ProductionDetail: { deliveryDate: string; productId: string };
-  /** Batch B placeholders, routed now so dashboard quick actions never dead-end. */
   CutoffSettings: undefined;
   /** FR-32 to FR-35 — the offers the franchise has published. */
   Offers: undefined;
   /** FR-32, FR-35 — one offer: its terms, its reach and the actions on it. */
   OfferDetails: { offerId: string };
-  PaymentsQueue: undefined;
-  Reports: undefined;
 };
 
 export type AdminShopsStackParamList = {

@@ -68,6 +68,7 @@ const persistedCartReducer = persistReducer(
       'lines',
       'notes',
       'draftOrderId',
+      'appliedOfferId',
       'dirty',
       'lastSyncedAt',
     ],

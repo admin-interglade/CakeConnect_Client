@@ -897,9 +897,9 @@ export const strings = {
     termTargetSome: (count: number) =>
       `Only the ${count} named ${count === 1 ? 'shop' : 'shops'} can see it.`,
     termTargetNobody: 'No shop can see it: it names none and is not network-wide.',
-    /** G20, said the way it will actually reach a shop. */
+    /** The shop selects an eligible offer from its cart. */
     termNotAutoApplied:
-      'The discount never reaches a shop order total. Order pricing does not read offers, so it has to be applied when the invoice is raised.',
+      'A shop selects an eligible offer in its cart. The discount is included in the order total before submission.',
     windowLabel: 'Runs',
     window: (from: string, to: string) => `${from} to ${to}`,
     startsOn: (date: string) => `Starts ${date}`,
@@ -1152,6 +1152,10 @@ export const strings = {
     subtotal: 'Subtotal',
     tax: 'Tax',
     total: 'Order total',
+    offersTitle: 'Apply an offer',
+    noEligibleOffers: 'No live offers apply to the products in this order.',
+    offerSelected: (title: string) => `${title} applied`,
+    offerDiscount: 'Offer discount',
     taxNote: 'GST is applied by the franchise at invoicing.',
     itemsCount: (lines: number, units: string) =>
       `${lines} ${lines === 1 ? 'item' : 'items'} · ${units} units`,
@@ -1187,7 +1191,7 @@ export const strings = {
     belowMoq: 'Some lines are below their minimum order quantity.',
 
     offersNote:
-      'Offers on these items are applied by the franchise when the invoice is raised, so they are not deducted from this total.',
+      'Select one eligible live offer. The discount is shown before you submit.',
   },
 
   shopOrders: {
@@ -1374,9 +1378,9 @@ export const strings = {
       flat: (value: string) => `${value} off`,
       buyXGetY: (buy: number, get: number) => `Buy ${buy}, get ${get}`,
     },
-    /** FR-34 — the half of the requirement the backend cannot honour. */
+    /** FR-34 — the shop chooses an eligible offer while building its order. */
     notAutoApplied:
-      'Offers are applied by the franchise when your invoice is raised, so they do not change your order total here.',
+      'Choose an eligible live offer in your cart to include its discount before submitting the order.',
   },
 
   notifications: {

@@ -11,7 +11,6 @@ import ShopDetails from '../screens/admin/shops/ShopDetails';
 import OwnerProfile from '../screens/admin/shops/OwnerProfile';
 
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
-import ComingSoonScreen from '../screens/admin/ComingSoonScreen';
 import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
 import CutoffSettings from '../screens/admin/cutoff/CutoffSettings';
 import OffersList from '../screens/admin/offers/OffersList';
@@ -71,12 +70,6 @@ function DashboardStack() {
       <DashboardStackNav.Screen name="Offers" component={OffersList} />
       <DashboardStackNav.Screen name="OfferDetails" component={OfferDetails} />
 
-      {/* Batch B — routed so the dashboard quick actions resolve today. */}
-      <DashboardStackNav.Screen
-        name="PaymentsQueue"
-        component={ComingSoonScreen}
-      />
-      <DashboardStackNav.Screen name="Reports" component={ComingSoonScreen} />
     </DashboardStackNav.Navigator>
   );
 }

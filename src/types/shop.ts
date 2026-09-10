@@ -106,6 +106,7 @@ export type CartTotals = {
   lineCount: number;
   unitCount: number;
   subtotal: number;
+  discountTotal: number;
   /**
    * The server's GST rate is currently zero, so this is zero on every order it
    * prices. It is still shown rather than hidden: FR-7 asks for a value "with

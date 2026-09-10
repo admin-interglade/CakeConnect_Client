@@ -28,19 +28,23 @@ import {
   setLineNote,
   setOrderNote,
   setQuantity,
+  setAppliedOffer,
 } from '../../store/cartSlice';
 import type { AppDispatch, RootState } from '../../store/store';
 import { queryKeys } from '../queryKeys';
 import { useActiveShop } from './useActiveShop';
 import { useCutoff } from './useCutoff';
+import { useOffers } from './useOffers';
 import type { Order } from '../../types/admin';
 import type {
   CartBlocker,
   CartLine,
   CartTotals,
   CatalogueProduct,
+  Offer,
   ShopCredit,
 } from '../../types/shop';
+import { calculateOfferPricing, offerMatchesCart } from '../../utils/offers';
 
 /**
  * FR-7 to FR-12 — the next-day order, from first tap to submitted.
@@ -90,6 +94,8 @@ type CartResult = {
   canSubmit: boolean;
   /** PRD §8 — over the limit on a shop the franchise only warns, not blocks. */
   creditWarning: boolean;
+  appliedOffer?: Offer;
+  eligibleOffers: Offer[];
 
   /* Editing — all local, all synchronous. */
   add: (product: CatalogueProduct, quantity?: number) => void;
@@ -97,6 +103,7 @@ type CartResult = {
   remove: (productId: string) => void;
   setNote: (productId: string, note: string) => void;
   setOrderNotes: (notes: string) => void;
+  applyOffer: (offerId: string | null) => void;
 
   /* Writes. */
   save: () => void;
@@ -122,18 +129,25 @@ type CartResult = {
 const isNotFound = (error: unknown): boolean =>
   (error as AxiosError)?.response?.status === 404;
 
-export function computeTotals(lines: CartLine[]): CartTotals {
+export function computeTotals(
+  lines: CartLine[],
+  offer?: Offer,
+): CartTotals {
   const subtotal = lines.reduce(
     (sum, line) => sum + line.unitPrice * line.quantity,
     0,
   );
+  const discountTotal = offer
+    ? calculateOfferPricing(offer, lines).discount
+    : 0;
 
   return {
     lineCount: lines.length,
     unitCount: lines.reduce((sum, line) => sum + line.quantity, 0),
     subtotal,
+    discountTotal,
     taxTotal: 0,
-    total: subtotal,
+    total: Math.max(subtotal - discountTotal, 0),
   };
 }
 
@@ -147,6 +161,7 @@ export function useCart(): CartResult {
 
   const { shopId } = useActiveShop();
   const { cutoff, secondsRemaining, passed } = useCutoff();
+  const offers = useOffers();
   const cart = useSelector((state: RootState) => state.cart);
 
   const deliveryDate = nextDeliveryDate();
@@ -254,7 +269,24 @@ export function useCart(): CartResult {
     () => (cart.shopId === shopId ? cart.lines : EMPTY_LINES),
     [cart.shopId, cart.lines, shopId],
   );
-  const totals = React.useMemo(() => computeTotals(lines), [lines]);
+  const eligibleOffers = React.useMemo(
+    () => offers.active.filter(offer => offerMatchesCart(offer, lines)),
+    [offers.active, lines],
+  );
+  const appliedOffer = React.useMemo(
+    () => eligibleOffers.find(offer => offer.id === cart.appliedOfferId),
+    [cart.appliedOfferId, eligibleOffers],
+  );
+  const totals = React.useMemo(
+    () => computeTotals(lines, appliedOffer),
+    [lines, appliedOffer],
+  );
+
+  React.useEffect(() => {
+    if (cart.appliedOfferId && !appliedOffer) {
+      dispatch(setAppliedOffer(null));
+    }
+  }, [appliedOffer, cart.appliedOfferId, dispatch]);
 
   const alreadySubmitted = Boolean(
     existingOrder && existingOrder.status !== 'draft',
@@ -303,10 +335,15 @@ export function useCart(): CartResult {
    */
   const pushDraft = React.useCallback(async (): Promise<Order> => {
     if (cart.draftOrderId) {
-      return updateDraftOrder(cart.draftOrderId, lines, cart.notes);
+      return updateDraftOrder(
+        cart.draftOrderId,
+        lines,
+        cart.notes,
+        cart.appliedOfferId,
+      );
     }
-    return createDraftOrder(shopId, lines, cart.notes);
-  }, [cart.draftOrderId, cart.notes, lines, shopId]);
+    return createDraftOrder(shopId, lines, cart.notes, cart.appliedOfferId ?? undefined);
+  }, [cart.appliedOfferId, cart.draftOrderId, cart.notes, lines, shopId]);
 
   const save = useMutation({
     mutationFn: pushDraft,
@@ -420,6 +457,8 @@ export function useCart(): CartResult {
     blockers,
     canSubmit: blockers.length === 0 && !alreadySubmitted,
     creditWarning: overCreditLimit && !creditBlocks,
+    appliedOffer,
+    eligibleOffers,
 
     add: (product, quantity) =>
       dispatch(
@@ -441,6 +480,7 @@ export function useCart(): CartResult {
     remove: productId => dispatch(removeLine(productId)),
     setNote: (productId, note) => dispatch(setLineNote({ productId, note })),
     setOrderNotes: notes => dispatch(setOrderNote(notes)),
+    applyOffer: (offerId: string | null) => dispatch(setAppliedOffer(offerId)),
 
     save: () => save.mutate(),
     submit: () => submit.mutate(),

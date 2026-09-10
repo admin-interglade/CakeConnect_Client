@@ -37,6 +37,7 @@ import type {
   ShopTabParamList,
 } from '../../../navigation/types';
 import CutoffStrip from '../components/CutoffStrip';
+import { describeDiscount } from '../components/ActiveOfferCard';
 
 /** The cart sits in the Home stack but links across to the Orders tab. */
 type Navigation = StackNavigationProp<ShopHomeStackParamList> &
@@ -160,8 +161,43 @@ export default function CartScreen() {
           />
         </SectionCard>
 
+        <SectionCard title={strings.cart.offersTitle}>
+          {cart.eligibleOffers.length === 0 ? (
+            <AppText variant="bodySecondary">{strings.cart.noEligibleOffers}</AppText>
+          ) : (
+            cart.eligibleOffers.map(offer => (
+              <AppButton
+                key={offer.id}
+                label={
+                  cart.appliedOffer?.id === offer.id
+                    ? strings.cart.offerSelected(offer.title)
+                    : `${offer.title} · ${describeDiscount(offer)}`
+                }
+                icon={cart.appliedOffer?.id === offer.id ? 'check' : 'tag-outline'}
+                variant={cart.appliedOffer?.id === offer.id ? 'primary' : 'outline'}
+                onPress={() =>
+                  cart.applyOffer(cart.appliedOffer?.id === offer.id ? null : offer.id)
+                }
+                disabled={cart.cutoffPassed}
+                style={styles.offerButton}
+              />
+            ))
+          )}
+          {cart.appliedOffer ? (
+            <InlineMessage tone="success" style={styles.offerMessage}>
+              {strings.cart.offerSelected(cart.appliedOffer.title)}
+            </InlineMessage>
+          ) : null}
+        </SectionCard>
+
         <SectionCard title={strings.cart.total}>
           <TotalRow label={strings.cart.subtotal} value={cart.totals.subtotal} />
+          {cart.totals.discountTotal > 0 ? (
+            <TotalRow
+              label={strings.cart.offerDiscount}
+              value={-cart.totals.discountTotal}
+            />
+          ) : null}
           <TotalRow label={strings.cart.tax} value={cart.totals.taxTotal} />
           <View style={styles.grandTotal}>
             <AppText variant="h3">{strings.cart.total}</AppText>
@@ -171,8 +207,6 @@ export default function CartScreen() {
             {strings.cart.taxNote}
           </AppText>
 
-          {/* FR-34 — an offer does not change this total, and saying so here
-              is the only place a shop would otherwise be misled. */}
           <InlineMessage tone="info" style={styles.note}>
             {strings.cart.offersNote}
           </InlineMessage>
@@ -450,6 +484,8 @@ const styles = StyleSheet.create({
   },
   taxNote: { marginTop: spacing.xs },
   note: { marginTop: spacing.md },
+  offerButton: { marginTop: spacing.sm },
+  offerMessage: { marginTop: spacing.sm },
   submitBar: { paddingTop: spacing.sm },
   submitNote: { marginTop: spacing.sm, textAlign: 'center' },
 });

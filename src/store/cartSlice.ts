@@ -34,6 +34,7 @@ type CartState = {
   notes: string;
   /** The server-side DRAFT this cart is backed by, once one exists. */
   draftOrderId: string | null;
+  appliedOfferId: string | null;
   /** True when local edits have not reached the server. */
   dirty: boolean;
   /** ISO timestamp of the last successful push, for the sync caption. */
@@ -46,6 +47,7 @@ const initialState: CartState = {
   lines: [],
   notes: '',
   draftOrderId: null,
+  appliedOfferId: null,
   dirty: false,
   lastSyncedAt: null,
 };
@@ -103,6 +105,7 @@ const cartSlice = createSlice({
       state.lines = [];
       state.notes = '';
       state.draftOrderId = null;
+      state.appliedOfferId = null;
       state.dirty = false;
       state.lastSyncedAt = null;
     },
@@ -181,6 +184,11 @@ const cartSlice = createSlice({
       state.dirty = true;
     },
 
+    setAppliedOffer: (state, action: PayloadAction<string | null>) => {
+      state.appliedOfferId = action.payload;
+      state.dirty = true;
+    },
+
     /**
      * FR-8 — replaces the cart wholesale from a repeat, or from a server draft
      * adopted on load. Not dirty afterwards: what is on screen is what the
@@ -221,6 +229,7 @@ const cartSlice = createSlice({
       state.lines = [];
       state.notes = '';
       state.draftOrderId = null;
+      state.appliedOfferId = null;
       state.dirty = false;
       state.lastSyncedAt = null;
     },
@@ -234,6 +243,7 @@ export const {
   removeLine,
   setLineNote,
   setOrderNote,
+  setAppliedOffer,
   replaceLines,
   markSynced,
   clearCart,

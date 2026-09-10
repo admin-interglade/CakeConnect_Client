@@ -265,8 +265,6 @@ export default function AdminDashboard() {
                 value={formatCurrencyCompact(stats.collectionsReceivedToday)}
                 icon="hand-coin-outline"
                 tone="success"
-                onPress={() => navigation.navigate('PaymentsQueue')}
-                accessibilityHint="Opens the payment confirmation queue"
               />
             </View>
           </>
@@ -532,43 +530,6 @@ export default function AdminDashboard() {
             />
           )}
         </View>
-
-        {/* <SectionCard
-          title={strings.dashboard.quickActions}
-          style={styles.section}
-        >
-          <View style={styles.quickActions}>
-            <AppButton
-              label={strings.dashboard.actionOrders}
-              onPress={() => goToOrders()}
-              variant="outline"
-              icon="clipboard-list-outline"
-              style={styles.quickAction}
-            />
-            <AppButton
-              label={strings.dashboard.actionShops}
-              onPress={() => tabNavigation?.navigate('ShopsTab' as never)}
-              variant="outline"
-              icon="storefront-outline"
-              style={styles.quickAction}
-            />
-            <AppButton
-              label={strings.dashboard.actionPayments}
-              onPress={() => navigation.navigate('PaymentsQueue')}
-              variant="outline"
-              icon="hand-coin-outline"
-              style={styles.quickAction}
-            />
-            <AppButton
-              label={strings.dashboard.actionReports}
-              onPress={() => navigation.navigate('Reports')}
-              variant="outline"
-              icon="chart-box-outline"
-              style={styles.quickAction}
-            />
-          </View>
-        </SectionCard> */}
-
 
       </ScrollView>
     </Screen>
