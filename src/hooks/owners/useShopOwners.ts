@@ -1,4 +1,9 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import { getShopOwner, getShopOwners } from '../../services/admin';
 import { describeApiError } from '../../services/api';
@@ -6,6 +11,7 @@ import { queryKeys } from '../queryKeys';
 import { useShopOptions } from '../shops/useShops';
 import type {
   AssignedShopSummary,
+  Paginated,
   Pagination,
   ShopOwner,
 } from '../../types/admin';
@@ -53,12 +59,40 @@ type ShopOwnerResult = {
   refetch: () => void;
 };
 
-/** One owner and the shops they hold. Idle until an `ownerId` exists. */
+/**
+ * The owner as a directory page already holds them. `GET /users` returns the
+ * same fields and shops as the detail route, so a screen opened from the list
+ * can render at once instead of behind a spinner while the detail loads.
+ */
+function findListedOwner(
+  queryClient: QueryClient,
+  ownerId: string,
+): ShopOwner | undefined {
+  const pages = queryClient.getQueriesData<Paginated<ShopOwner>>({
+    queryKey: queryKeys.owners.lists,
+  });
+  for (const [, page] of pages) {
+    const owner = page?.items.find(item => item.id === ownerId);
+    if (owner) {
+      return owner;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * One owner and the shops they hold. Idle until an `ownerId` exists.
+ *
+ * Shows the directory's copy while the detail is fetched in the background.
+ */
 export function useShopOwnerDetails(ownerId?: string): ShopOwnerResult {
+  const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: queryKeys.owners.detail(ownerId ?? ''),
     queryFn: () => getShopOwner(ownerId as string),
     enabled: Boolean(ownerId),
+    placeholderData: () =>
+      ownerId ? findListedOwner(queryClient, ownerId) : undefined,
   });
 
   return {

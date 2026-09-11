@@ -1,6 +1,11 @@
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
 import {
@@ -42,24 +47,36 @@ type OwnerProfileRoute = RouteProp<AdminShopsStackParamList, 'OwnerProfile'>;
  * which links no account and lets nobody sign in. This screen creates the
  * account and hands it the shops that have no owner yet.
  *
- * One screen, two modes, like `ShopDetails`: without an `ownerId` it is the
- * create form; with one it shows the account, the shops it holds, and the
- * action to give it more.
+ * One screen, three modes, like `ShopDetails`: without an `ownerId` it is the
+ * create form; with one and `mode: 'edit'` it is that same form filled in with
+ * the owner's details (opened from `OwnersList`); otherwise it shows the
+ * account, the shops it holds, and the action to give it more.
  */
 export default function OwnerProfile() {
   const navigation = useNavigation<OwnerProfileNavigation>();
   const { params } = useRoute<OwnerProfileRoute>();
   const ownerId = params?.ownerId;
   const isCreateMode = !ownerId;
+  const isEditMode = Boolean(ownerId) && params?.mode === 'edit';
 
-  const [formOpen, setFormOpen] = React.useState(isCreateMode);
+  const [formOpen, setFormOpen] = React.useState(isCreateMode || isEditMode);
   const [assignOpen, setAssignOpen] = React.useState(false);
+
+  // The form is a native modal, so it is closed before the owners list is
+  // pushed; coming back to the create screen opens it again.
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isCreateMode) {
+        setFormOpen(true);
+      }
+    }, [isCreateMode]),
+  );
 
   const { owner, isLoading, isError, error, isRefetching, refetch } =
     useShopOwnerDetails(ownerId);
 
   const available = useAvailableShops();
-  const { create, assignShops } = useOwnerMutations();
+  const { create, assignShops, update } = useOwnerMutations();
 
   const shopOptions = React.useMemo(
     () =>
@@ -104,6 +121,25 @@ export default function OwnerProfile() {
     [shopOptions, available.isLoading, available.truncated],
   );
 
+  /*
+   * Editing an owner never takes shops away — there is no unassign route — so
+   * the picker only adds, is optional, and names what the owner already holds.
+   */
+  const heldShops = owner?.shops;
+  const editShopsField: FormField = React.useMemo(
+    () => ({
+      ...shopsField,
+      label: strings.owners.fields.addShops,
+      required: false,
+      hint: available.truncated
+        ? strings.owners.shopsTruncated
+        : heldShops && heldShops.length > 0
+        ? strings.owners.hints.heldShops(heldShops.map(shop => shop.name))
+        : strings.owners.hints.shops,
+    }),
+    [shopsField, available.truncated, heldShops],
+  );
+
   const ownerFields = React.useMemo<FormField[]>(
     () => [
       {
@@ -117,7 +153,7 @@ export default function OwnerProfile() {
         label: strings.owners.fields.phone,
         type: 'tel',
         required: true,
-        hint: strings.owners.hints.phone,
+        hint: isEditMode ? strings.owners.hints.phoneEdit : strings.owners.hints.phone,
       },
       // Required by `docs/prompts/shop-owner-onboarding.md`, which sends the
       // activation link here. That mail does not exist yet, so the hint says so
@@ -127,11 +163,11 @@ export default function OwnerProfile() {
         label: strings.owners.fields.email,
         type: 'email',
         required: true,
-        hint: strings.owners.hints.email,
+        hint: isEditMode ? strings.owners.hints.emailEdit : strings.owners.hints.email,
       },
-      shopsField,
+      isEditMode ? editShopsField : shopsField,
     ],
-    [shopsField],
+    [shopsField, editShopsField, isEditMode],
   );
 
   const submitOwner = (values: FormValues) => {
@@ -142,7 +178,7 @@ export default function OwnerProfile() {
       shops: toSummaries(values.shops ?? ''),
     };
 
-    const res = create.mutate(input, {
+    create.mutate(input, {
       onSuccess: outcome => {
         setFormOpen(false);
         // Replace rather than push: the form is spent, and backing out of the
@@ -153,20 +189,59 @@ export default function OwnerProfile() {
         });
       },
     });
-    console.log("Create owner", res);
   };
 
-  const submitAssignment = (values: FormValues) => {
-    console.log('assigning', values.shops, 'to', ownerId);
+  /**
+   * Save the details, then go back to the list as soon as they land.
+   *
+   * Any shops picked are handed over after that without holding the form open:
+   * each assignment waits on the server's email, and the details the admin
+   * came to fix are already saved. The assignment reports through its own
+   * toast, which the closed modal no longer covers.
+   */
+  const submitEdit = (values: FormValues) => {
     if (!ownerId) {
       return;
     }
 
-    const res = assignShops.mutate(
+    const shops = toSummaries(values.shops ?? '');
+
+    update.mutate(
+      {
+        ownerId,
+        input: {
+          name: values.name.trim(),
+          phone: values.phone.replace(/\D/g, ''),
+          email: values.email.trim() || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          if (shops.length > 0) {
+            assignShops.mutate({ ownerId, shops });
+          }
+          setFormOpen(false);
+          navigation.goBack();
+        },
+      },
+    );
+  };
+
+  const submitAssignment = (values: FormValues) => {
+    if (!ownerId) {
+      return;
+    }
+
+    assignShops.mutate(
       { ownerId, shops: toSummaries(values.shops ?? '') },
       { onSuccess: () => setAssignOpen(false) },
     );
-    console.log("Assiging result", res)
+  };
+
+  /** Leave the create form for the owner directory. */
+  const openOwnersList = () => {
+    setFormOpen(false);
+    navigation.navigate('OwnersList');
   };
 
   /*
@@ -193,6 +268,7 @@ export default function OwnerProfile() {
   const assignError = assignShops.error
     ? describeApiError(assignShops.error)
     : undefined;
+  const updateError = update.error ? describeApiError(update.error) : undefined;
 
   if (isCreateMode) {
     return (
@@ -212,7 +288,56 @@ export default function OwnerProfile() {
           submitting={create.isPending}
           errorMessage={createError ?? pickerNotice}
           onSubmit={submitOwner}
+          headerAction={{
+            icon: 'account-group-outline',
+            label: strings.owners.listAction,
+            onPress: openOwnersList,
+          }}
           onDismiss={() => {
+            setFormOpen(false);
+            navigation.goBack();
+          }}
+        />
+      </Screen>
+    );
+  }
+
+  if (isEditMode) {
+    return (
+      <Screen>
+        <ScreenHeader
+          title={strings.owners.editTitle}
+          subtitle={owner?.name}
+          onBack={() => navigation.goBack()}
+        />
+
+        {isLoading ? (
+          <LoadingState />
+        ) : isError || !owner ? (
+          <ErrorState message={error} onRetry={refetch} retrying={isRefetching} />
+        ) : null}
+
+        {/*
+          Shown only once the owner has loaded: the form seeds its values when
+          it becomes visible, so opening it earlier would seed it blank.
+        */}
+        <ModalForm
+          visible={formOpen && Boolean(owner)}
+          title={strings.owners.editTitle}
+          fields={ownerFields}
+          initialValues={{
+            name: owner?.name ?? '',
+            phone: owner?.phone ?? '',
+            email: owner?.email ?? '',
+            shops: '',
+          }}
+          submitLabel={strings.owners.update}
+          submitting={update.isPending || assignShops.isPending}
+          errorMessage={updateError ?? assignError}
+          onSubmit={submitEdit}
+          onDismiss={() => {
+            update.reset();
+            assignShops.reset();
             setFormOpen(false);
             navigation.goBack();
           }}
@@ -246,6 +371,12 @@ export default function OwnerProfile() {
         subtitle={owner.phone}
         onBack={() => navigation.goBack()}
         actions={[
+          {
+            icon: 'pencil-outline',
+            label: strings.owners.editAction,
+            onPress: () =>
+              navigation.push('OwnerProfile', { ownerId: owner.id, mode: 'edit' }),
+          },
           {
             icon: 'store-plus-outline',
             label: strings.owners.assignAction,

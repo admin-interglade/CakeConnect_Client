@@ -9,6 +9,7 @@ import AdminDashboard from '../screens/admin/dashboard/AdminDashboard';
 import ShopsList from '../screens/admin/shops/ShopsList';
 import ShopDetails from '../screens/admin/shops/ShopDetails';
 import OwnerProfile from '../screens/admin/shops/OwnerProfile';
+import OwnersList from '../screens/admin/shops/OwnersList';
 
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
@@ -80,6 +81,7 @@ function ShopsStack() {
       <ShopsStackNav.Screen name="ShopsList" component={ShopsList} />
       <ShopsStackNav.Screen name="ShopDetails" component={ShopDetails} />
       <ShopsStackNav.Screen name="OwnerProfile" component={OwnerProfile} />
+      <ShopsStackNav.Screen name="OwnersList" component={OwnersList} />
       <ShopsStackNav.Screen name="OrderDetails" component={OrderDetails} />
       <ShopsStackNav.Screen name="ShortSupply" component={ShortSupply} />
     </ShopsStackNav.Navigator>

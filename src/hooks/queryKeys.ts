@@ -60,6 +60,8 @@ export const queryKeys = {
    */
   owners: {
     all: ['owners'] as const,
+    /** Every directory page, whatever its search — for cache reads and writes. */
+    lists: ['owners', 'list'] as const,
     list: (search: string, pagination: Pagination) =>
       ['owners', 'list', search, pagination.page, pagination.limit] as const,
     detail: (ownerId: string) => ['owners', 'detail', ownerId] as const,

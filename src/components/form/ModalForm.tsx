@@ -79,6 +79,8 @@ type ModalFormProps = {
   errorMessage?: string;
   onSubmit: (values: FormValues) => void;
   onDismiss: () => void;
+  /** An icon button beside close, for leaving the form for a related screen. */
+  headerAction?: { icon: string; label: string; onPress: () => void };
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -99,6 +101,7 @@ export default function ModalForm({
   errorMessage,
   onSubmit,
   onDismiss,
+  headerAction,
 }: ModalFormProps) {
   const insets = useSafeAreaInsets();
   const [values, setValues] = React.useState<FormValues>(initialValues);
@@ -181,6 +184,24 @@ export default function ModalForm({
           <AppText variant="h2" style={styles.title} numberOfLines={1}>
             {title}
           </AppText>
+
+          {headerAction ? (
+            <Pressable
+              onPress={headerAction.onPress}
+              disabled={submitting}
+              hitSlop={layout.hitSlop}
+              accessibilityRole="button"
+              accessibilityLabel={headerAction.label}
+              accessibilityState={{ disabled: submitting }}
+              style={styles.close}
+            >
+              <Icon
+                name={headerAction.icon}
+                size={iconSize.lg}
+                color={submitting ? colors.textMuted : colors.primary}
+              />
+            </Pressable>
+          ) : null}
 
           <Pressable
             onPress={onDismiss}

@@ -8,6 +8,7 @@ export {
   ORDER_CARD_HEIGHT,
 } from './OrderSummaryCard';
 export { default as ShopCard } from './ShopCard';
+export { default as OwnerCard } from './OwnerCard';
 export { default as LedgerEntryCard } from './LedgerEntryCard';
 export { default as OrderHistoryCard } from './OrderHistoryCard';
 export { default as OrderQueueCard } from './OrderQueueCard';

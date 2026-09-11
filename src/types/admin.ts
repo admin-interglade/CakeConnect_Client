@@ -170,13 +170,19 @@ export type ShopOwner = {
   phone: string;
   email?: string;
   status: ShopOwnerStatus;
-  /**
-   * Empty on list rows: `GET /users` returns no shop association, only
-   * `GET /users/:id` does. An empty array on a list row therefore means "not
-   * loaded here", which is why the list does not report a shop count.
-   */
+  /** The outlets the account holds; both `GET /users` and `GET /users/:id` return them. */
   shops: AssignedShopSummary[];
   createdAt: string;
+};
+
+/**
+ * The write shape for editing an owner's account. Shops are not part of it:
+ * adding them goes through the assignment calls, so a failure can name the shop.
+ */
+export type ShopOwnerUpdateInput = {
+  name: string;
+  phone: string;
+  email?: string;
 };
 
 /** The write shape for FR-2 owner creation. */
