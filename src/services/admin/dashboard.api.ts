@@ -7,7 +7,6 @@ import type {
 } from '../../types/admin';
 import { apiGet } from '../api';
 import {
-  NotImplementedOnServer,
   dateRangePresetCodec,
   toDashboardStats,
   toTopProducts,
@@ -46,17 +45,26 @@ export async function getDashboardStats(range: DateRange): Promise<DashboardStat
   });
 }
 
-/**
- * FR-21's order-value trend needs a per-day series. `/dashboard/admin` reports
- * single totals and `/reports/sales` aggregates by shop and by product, so
- * nothing exposes a time series. See docs/api-gaps.md G5.
- */
-export async function getOrderTrends(_range: DateRange): Promise<OrderTrendPoint[]> {
-  throw new NotImplementedOnServer(
-    'getOrderTrends',
-    'G5',
-    'no endpoint returns order value or count bucketed by day',
-  );
+export type ApiOrderTrendReport = {
+  points?: Array<{
+    date?: string;
+    orderValue?: string | number;
+    orderCount?: string | number;
+  }>;
+};
+
+/** FR-21 — load the backend's daily order-value series. */
+export async function getOrderTrends(range: DateRange): Promise<OrderTrendPoint[]> {
+  const report = await apiGet<ApiOrderTrendReport>('/reports/order-trends', {
+    from: range.from,
+    to: range.to,
+  });
+
+  return (report.points ?? []).map(point => ({
+    date: point.date ?? '',
+    orderValue: numeric(point.orderValue),
+    orderCount: numeric(point.orderCount),
+  }));
 }
 
 /** FR-21 — top products by quantity, from the sales report's product rollup. */

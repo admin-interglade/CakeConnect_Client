@@ -81,7 +81,7 @@ export const strings = {
         "Tomorrow's production plan has not been generated yet. It is created from submitted orders once the cut-off passes.",
     },
     charts: {
-      trendTitle: 'Order value trend',
+      trendTitle: 'Order value trend (last 7 days)',
       topProductsTitle: 'Top products by quantity',
       empty: 'No data for this range.',
       /**
@@ -90,6 +90,7 @@ export const strings = {
        */
       unavailable:
         'Daily order-value trend is not available from the server yet.',
+      loadError: 'Chart data could not be loaded. Try refreshing the dashboard.',
     },
     /** FR-32 to FR-35 — the live-offers strip, beside the recent-orders one. */
     offers: {

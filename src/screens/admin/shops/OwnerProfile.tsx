@@ -24,6 +24,7 @@ import {
   useOwnerMutations,
   useShopOwnerDetails,
 } from '../../../hooks';
+import { describeApiError } from '../../../services/api';
 import type { AdminShopsStackParamList } from '../../../navigation/types';
 import type { AssignedShopSummary, ShopOwnerInput } from '../../../types/admin';
 
@@ -141,7 +142,7 @@ export default function OwnerProfile() {
       shops: toSummaries(values.shops ?? ''),
     };
 
-    create.mutate(input, {
+    const res = create.mutate(input, {
       onSuccess: outcome => {
         setFormOpen(false);
         // Replace rather than push: the form is spent, and backing out of the
@@ -152,17 +153,20 @@ export default function OwnerProfile() {
         });
       },
     });
+    console.log("Create owner", res);
   };
 
   const submitAssignment = (values: FormValues) => {
+    console.log('assigning', values.shops, 'to', ownerId);
     if (!ownerId) {
       return;
     }
 
-    assignShops.mutate(
+    const res = assignShops.mutate(
       { ownerId, shops: toSummaries(values.shops ?? '') },
       { onSuccess: () => setAssignOpen(false) },
     );
+    console.log("Assiging result", res)
   };
 
   /*
@@ -178,6 +182,16 @@ export default function OwnerProfile() {
     ? strings.owners.shopsUnavailable
     : emptyShopPicker
     ? strings.owners.shopsEmpty
+    : undefined;
+
+  /*
+   * A failed submit is also reported inside the form: `ModalForm` is a
+   * full-screen native modal, which draws over the app-wide toast, so the toast
+   * alone leaves the admin on a form that silently stopped spinning.
+   */
+  const createError = create.error ? describeApiError(create.error) : undefined;
+  const assignError = assignShops.error
+    ? describeApiError(assignShops.error)
     : undefined;
 
   if (isCreateMode) {
@@ -196,7 +210,7 @@ export default function OwnerProfile() {
           initialValues={{ name: '', phone: '', email: '', shops: '' }}
           submitLabel={strings.owners.submit}
           submitting={create.isPending}
-          errorMessage={pickerNotice}
+          errorMessage={createError ?? pickerNotice}
           onSubmit={submitOwner}
           onDismiss={() => {
             setFormOpen(false);
@@ -288,9 +302,13 @@ export default function OwnerProfile() {
         initialValues={{ shops: joinValues([]) }}
         submitLabel={strings.owners.assignAction}
         submitting={assignShops.isPending}
-        errorMessage={pickerNotice}
+        errorMessage={assignError ?? pickerNotice}
         onSubmit={submitAssignment}
-        onDismiss={() => setAssignOpen(false)}
+        onDismiss={() => {
+          // Reopening should start clean, not with the last attempt's error.
+          assignShops.reset();
+          setAssignOpen(false);
+        }}
       />
     </Screen>
   );

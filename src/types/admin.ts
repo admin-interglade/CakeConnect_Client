@@ -200,6 +200,7 @@ export type ShopOwnerInput = {
 export type ShopAssignmentOutcome = {
   assigned: AssignedShopSummary[];
   failed: { shop: AssignedShopSummary; message: string }[];
+  inviteError?: string;
 };
 
 /**

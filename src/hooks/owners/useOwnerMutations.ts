@@ -31,12 +31,8 @@ export function useOwnerMutations() {
   };
 
   /**
-   * The toast names the shops that did not link rather than reporting a flat
-   * success: the account is created either way, and an admin who is not told
-   * which assignment failed has no way to know what to retry.
-   *
-   * It also never says an invite was emailed — nothing sends one yet (see
-   * `owners.api.ts`) — and says instead how the owner actually gets in.
+  * The atomic owner endpoint either links every selected shop or fails before
+  * creating the account, so a successful create has no partial assignment.
    */
   const create = useMutation({
     mutationFn: (input: ShopOwnerInput) => createShopOwner(input),
@@ -45,8 +41,10 @@ export function useOwnerMutations() {
 
       if (outcome.failed.length === 0) {
         toast.show(
-          `${strings.owners.created(outcome.owner.name)} ${strings.owners.signInHint}`,
-          { tone: 'success' },
+          outcome.inviteError
+            ? `${strings.owners.created(outcome.owner.name)} ${outcome.inviteError}`
+            : `${strings.owners.created(outcome.owner.name)} ${strings.owners.signInHint}`,
+          { tone: outcome.inviteError ? 'info' : 'success' },
         );
         return;
       }
@@ -74,9 +72,12 @@ export function useOwnerMutations() {
       invalidateOwners(variables.ownerId);
 
       if (outcome.failed.length === 0) {
-        toast.show(strings.owners.assigned(outcome.assigned.length), {
-          tone: 'success',
-        });
+        toast.show(
+          outcome.inviteError
+            ? `${strings.owners.assigned(outcome.assigned.length)} ${outcome.inviteError}`
+            : strings.owners.assigned(outcome.assigned.length),
+          { tone: outcome.inviteError ? 'info' : 'success' },
+        );
         return;
       }
 
