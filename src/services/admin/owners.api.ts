@@ -11,6 +11,14 @@ import { apiGet, apiGetPaged, apiPost, describeApiError } from '../api';
 import { toShopOwner, userRoleCodec, type ApiUser } from '../mappers';
 
 /**
+ * Both owner writes answer only after the server has emailed the owner, and an
+ * SMTP round trip can outlast the default timeout. These POSTs are never
+ * retried, so timing out early reports a failure for an account that was
+ * created and a shop that was assigned.
+ */
+const OWNER_WRITE_TIMEOUT_MS = 60_000;
+
+/**
  * Shop owners — FR-2.
  *
  * Endpoints: `/users`, `/users/:id`, `/shops/:id/assign-owner`.
@@ -78,17 +86,29 @@ export async function assignShopsToOwner(
 ): Promise<ShopAssignmentOutcome> {
   const assigned: AssignedShopSummary[] = [];
   const failed: ShopAssignmentOutcome['failed'] = [];
+  const inviteErrors: string[] = [];
 
   for (const shop of shops) {
     try {
-      await apiPost(`/shops/${shop.id}/assign-owner`, { userId: ownerId });
+      const result = await apiPost<{ inviteError?: string }>(
+        `/shops/${shop.id}/assign-owner`,
+        { userId: ownerId },
+        { timeoutMs: OWNER_WRITE_TIMEOUT_MS },
+      );
+      if (result.inviteError) {
+        inviteErrors.push(`${shop.name}: ${result.inviteError}`);
+      }
       assigned.push(shop);
     } catch (error) {
       failed.push({ shop, message: describeApiError(error) });
     }
   }
 
-  return { assigned, failed };
+  return {
+    assigned,
+    failed,
+    inviteError: inviteErrors.length > 0 ? inviteErrors.join('; ') : undefined,
+  };
 }
 
 /**
@@ -104,20 +124,28 @@ export async function assignShopsToOwner(
 export async function createShopOwner(
   input: ShopOwnerInput,
 ): Promise<ShopOwnerCreationOutcome> {
-  const created = await apiPost<ApiUser>('/users', {
+  const result = await apiPost<{
+    user: ApiUser;
+    shops: unknown[];
+    inviteSent: boolean;
+    inviteError?: string;
+  }>(
+    '/users/owners',
+    {
     name: input.name,
     mobileNumber: input.phone,
-    ...(input.email ? { email: input.email } : {}),
-    role: userRoleCodec.toApi('shopOwner'),
-  });
+      email: input.email,
+      shopIds: input.shops.map(shop => shop.id),
+    },
+    { timeoutMs: OWNER_WRITE_TIMEOUT_MS },
+  );
 
-  const outcome = await assignShopsToOwner(created.id, input.shops);
+  const owner = await getShopOwner(result.user.id).catch(() => toShopOwner(result.user));
 
-  // Re-read rather than composing the owner locally: only the server knows
-  // which links actually persisted, and the detail route is what fills `shops`.
-  // A failure here still leaves a usable answer, because the create response
-  // already describes the account.
-  const owner = await getShopOwner(created.id).catch(() => toShopOwner(created));
-
-  return { owner, ...outcome };
+  return {
+    owner,
+    assigned: input.shops,
+    failed: [],
+    inviteError: result.inviteError,
+  };
 }
