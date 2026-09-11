@@ -26,6 +26,7 @@ type AdminDashboard = {
   production?: ProductionRequirement;
   /** False when no endpoint returns a per-day series (docs/api-gaps.md G5). */
   trendsAvailable: boolean;
+  chartsError?: string;
   /** True when the plan for that date has not been generated yet (FR-37). */
   productionNeedsGenerating: boolean;
   isLoading: boolean;
@@ -46,6 +47,12 @@ type AdminDashboard = {
 export function useAdminDashboard(range: DateRange): AdminDashboard {
   // FR-37 aggregates tomorrow's delivery, which is today's cut-off cycle.
   const deliveryDate = addDays(toApiDate(new Date()), 1);
+  const today = toApiDate(new Date());
+  const trendRange: DateRange = {
+    preset: 'custom',
+    from: addDays(today, -6),
+    to: today,
+  };
 
   const results = useQueries({
     queries: [
@@ -54,8 +61,8 @@ export function useAdminDashboard(range: DateRange): AdminDashboard {
         queryFn: () => getDashboardStats(range),
       },
       {
-        queryKey: queryKeys.dashboard.trends(range),
-        queryFn: () => getOrderTrends(range),
+        queryKey: queryKeys.dashboard.trends(trendRange),
+        queryFn: () => getOrderTrends(trendRange),
         // Never succeeds today; retrying only delays the empty state.
         retry: (count: number, error: unknown) =>
           !isMissingEndpoint(error) && count < 2,
@@ -91,6 +98,10 @@ export function useAdminDashboard(range: DateRange): AdminDashboard {
     topProducts: topProducts.data ?? [],
     production: production.data,
     trendsAvailable: !isMissingEndpoint(trends.error),
+    chartsError:
+      trends.error || topProducts.error
+        ? 'Chart data could not be loaded. Try refreshing the dashboard.'
+        : undefined,
     productionNeedsGenerating: ProductionPlanNotGenerated.is(production.error),
     // Only a first load blocks the screen; a failed refresh keeps cached rows.
     isLoading: results.some(result => result.isLoading),

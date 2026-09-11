@@ -98,6 +98,7 @@ export default function AdminDashboard() {
     topProducts,
     production,
     trendsAvailable,
+    chartsError,
     productionNeedsGenerating,
     isLoading,
     isError,
@@ -355,6 +356,10 @@ export default function AdminDashboard() {
         >
           {isLoading ? (
             <SkeletonList rows={3} />
+          ) : chartsError ? (
+            <InlineMessage tone="error" icon="alert-circle-outline">
+              {chartsError}
+            </InlineMessage>
           ) : trendsAvailable ? (
             <SimpleLineChart
               data={trends.map(point => ({
@@ -379,6 +384,10 @@ export default function AdminDashboard() {
         >
           {isLoading ? (
             <SkeletonList rows={3} />
+          ) : chartsError ? (
+            <InlineMessage tone="error" icon="alert-circle-outline">
+              {chartsError}
+            </InlineMessage>
           ) : (
             <SimpleBarChart
               data={topProducts.map(product => ({
