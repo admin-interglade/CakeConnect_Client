@@ -91,6 +91,12 @@ const dateFieldOptions: DropdownOption<OrderFilters['dateField']>[] = [
 ];
 
 /**
+ * How long typing must pause before the search reaches the query. Each change
+ * refetches the list and all nine tab counts, so it waits for a word, not a key.
+ */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
  * FR-40 order queue.
  *
  * The pipeline reads as a filtered card list: search, the day being worked,
@@ -146,6 +152,28 @@ export default function OrdersList() {
     setFilters(current => ({ ...current, ...partial }));
     setPagination(current => ({ ...current, page: 1 }));
     setSelected([]);
+  };
+
+  // The box shows every keystroke; the query only sees the text once typing
+  // pauses (or on the keyboard's search key).
+  const [searchText, setSearchText] = React.useState(filters.search);
+
+  const commitSearch = (text: string) => {
+    const next = text.trim();
+    if (next !== filters.search) {
+      updateFilters({ search: next });
+    }
+  };
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => commitSearch(searchText), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText]);
+
+  const clearAllFilters = () => {
+    setSearchText('');
+    updateFilters(defaultOrderFilters());
   };
 
   const openFilterSheet = () => {
@@ -226,8 +254,9 @@ export default function OrdersList() {
       />
 
       <SearchInput
-        value={filters.search}
-        onChangeText={search => updateFilters({ search })}
+        value={searchText}
+        onChangeText={setSearchText}
+        onSubmit={() => commitSearch(searchText)}
         placeholder={strings.orders.searchPlaceholder}
         testID="orders-search"
       />
@@ -398,7 +427,7 @@ export default function OrdersList() {
             }
             onAction={
               activeFilterCount > 0 || filters.search
-                ? () => updateFilters(defaultOrderFilters())
+                ? clearAllFilters
                 : undefined
             }
           />

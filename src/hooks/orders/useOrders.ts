@@ -94,12 +94,22 @@ export function useOrders(filters: OrderFilters, pagination: Pagination): Orders
     staleTime: 5 * 60_000,
   });
 
+  // The pending view comes from a query with no search parameter, and is at
+  // most one page of placeholder rows, so the search is applied here instead.
+  const pendingSearch = filters.search.trim().toLowerCase();
+  const pendingOrders = (pending.data ?? []).filter(
+    order =>
+      !pendingSearch ||
+      order.shopName.toLowerCase().includes(pendingSearch) ||
+      order.orderNumber.toLowerCase().includes(pendingSearch),
+  );
+
   const active = isPendingView ? pending : list;
-  const orders = isPendingView ? pending.data ?? [] : list.data?.items ?? [];
+  const orders = isPendingView ? pendingOrders : list.data?.items ?? [];
 
   return {
     orders,
-    total: isPendingView ? pending.data?.length ?? 0 : list.data?.total ?? 0,
+    total: isPendingView ? pendingOrders.length : list.data?.total ?? 0,
     counts: counts.data ?? { all: 0 },
     shops: shops.data?.items ?? [],
     dateFilterApplied: isOrderDateFilterSupported(filters),
