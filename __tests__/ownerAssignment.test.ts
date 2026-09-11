@@ -1,8 +1,9 @@
 import {
   assignShopsToOwner,
   createShopOwner,
+  updateShopOwner,
 } from '../src/services/admin/owners.api';
-import { apiGet, apiPost } from '../src/services/api';
+import { apiGet, apiPatch, apiPost } from '../src/services/api';
 import {
   toApiShopCreate,
   toShop,
@@ -32,6 +33,7 @@ jest.mock('../src/services/api', () => ({
 
 const getMock = apiGet as jest.MockedFunction<typeof apiGet>;
 const postMock = apiPost as jest.MockedFunction<typeof apiPost>;
+const patchMock = apiPatch as jest.MockedFunction<typeof apiPatch>;
 
 const shop = (id: string, name: string): AssignedShopSummary => ({
   id,
@@ -55,9 +57,8 @@ beforeEach(() => {
 });
 
 describe('createShopOwner', () => {
-  it('creates the account as a SHOP_OWNER without a password, then links each shop', async () => {
-    getMock.mockResolvedValue(apiUser());
-    postMock.mockResolvedValue(apiUser());
+  it('creates the account and links the shops in one call, without a password', async () => {
+    postMock.mockResolvedValue({ user: apiUser(), shops: [], inviteSent: true });
 
     await createShopOwner({
       name: 'Asha Menon',
@@ -66,54 +67,40 @@ describe('createShopOwner', () => {
       shops: [shop('s1', 'Indiranagar'), shop('s2', 'Koramangala')],
     });
 
-    expect(postMock).toHaveBeenNthCalledWith(1, '/users', {
-      name: 'Asha Menon',
-      mobileNumber: '9876543210',
-      email: 'asha@example.com',
-      role: 'SHOP_OWNER',
-    });
+    expect(postMock).toHaveBeenCalledTimes(1);
+    expect(postMock).toHaveBeenCalledWith(
+      '/users/owners',
+      {
+        name: 'Asha Menon',
+        mobileNumber: '9876543210',
+        email: 'asha@example.com',
+        shopIds: ['s1', 's2'],
+      },
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    );
     // An admin-chosen password would have to be read out to the owner.
     expect(postMock.mock.calls[0][1]).not.toHaveProperty('password');
-
-    expect(postMock).toHaveBeenNthCalledWith(2, '/shops/s1/assign-owner', {
-      userId: 'u1',
-    });
-    expect(postMock).toHaveBeenNthCalledWith(3, '/shops/s2/assign-owner', {
-      userId: 'u1',
-    });
   });
 
-  it('returns the owner with the shops that failed, rather than throwing the whole create away', async () => {
-    getMock.mockResolvedValue(apiUser());
-    postMock
-      .mockResolvedValueOnce(apiUser())
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(new Error('404'));
-
-    const outcome = await createShopOwner({
-      name: 'Asha Menon',
-      phone: '9876543210',
-      shops: [shop('s1', 'Indiranagar'), shop('s2', 'Koramangala')],
-    });
-
-    // The account exists. Reporting a flat failure would have the admin create
-    // a duplicate on the same mobile number, which the server 409s.
-    expect(outcome.owner.id).toBe('u1');
-    expect(outcome.assigned.map(s => s.name)).toEqual(['Indiranagar']);
-    expect(outcome.failed.map(entry => entry.shop.name)).toEqual(['Koramangala']);
-  });
-
-  it('still reports the owner when the confirming re-read fails', async () => {
-    postMock.mockResolvedValue(apiUser());
-    getMock.mockRejectedValue(new Error('network'));
-
-    const outcome = await createShopOwner({
-      name: 'Asha Menon',
-      phone: '9876543210',
+  it('returns the owner holding the selected shops without a second round trip', async () => {
+    postMock.mockResolvedValue({
+      user: apiUser(),
       shops: [],
+      inviteSent: false,
+      inviteError: 'SMTP down',
     });
 
-    expect(outcome.owner.name).toBe('Asha Menon');
+    const outcome = await createShopOwner({
+      name: 'Asha Menon',
+      phone: '9876543210',
+      shops: [shop('s1', 'Indiranagar')],
+    });
+
+    expect(getMock).not.toHaveBeenCalled();
+    expect(outcome.owner).toMatchObject({ id: 'u1', name: 'Asha Menon' });
+    expect(outcome.owner.shops.map(s => s.name)).toEqual(['Indiranagar']);
+    expect(outcome.failed).toEqual([]);
+    expect(outcome.inviteError).toBe('SMTP down');
   });
 
   it('propagates a failed create — there is no account to report on', async () => {
@@ -144,6 +131,43 @@ describe('assignShopsToOwner', () => {
       'Jayanagar',
     ]);
     expect(outcome.failed[0].message).toBe('Shop not found');
+  });
+
+  // Each call waits on the server's email; one at a time, that wait adds up.
+  it('sends every assignment without waiting for the one before', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    postMock.mockImplementation((() => gate.then(() => ({}))) as never);
+
+    const pending = assignShopsToOwner('u1', [
+      shop('s1', 'Indiranagar'),
+      shop('s2', 'Koramangala'),
+    ]);
+
+    expect(postMock).toHaveBeenCalledTimes(2);
+    release();
+    await expect(pending).resolves.toMatchObject({ failed: [] });
+  });
+});
+
+describe('updateShopOwner', () => {
+  it('patches the account with the server field names', async () => {
+    patchMock.mockResolvedValue(apiUser({ name: 'Asha M', mobileNumber: '9123456780' }));
+
+    const owner = await updateShopOwner('u1', {
+      name: 'Asha M',
+      phone: '9123456780',
+      email: 'asha@example.com',
+    });
+
+    expect(patchMock).toHaveBeenCalledWith('/users/u1', {
+      name: 'Asha M',
+      mobileNumber: '9123456780',
+      email: 'asha@example.com',
+    });
+    expect(owner).toMatchObject({ id: 'u1', name: 'Asha M', phone: '9123456780' });
   });
 });
 
@@ -176,7 +200,7 @@ describe('owner mapping', () => {
     expect(toShopOwner(apiUser({ status: 'INVITED' })).status).toBe('invited');
   });
 
-  it('yields no shops for a list row, which carries no association', () => {
+  it('yields no shops when the payload carries no association', () => {
     expect(toShopOwner(apiUser()).shops).toEqual([]);
   });
 });

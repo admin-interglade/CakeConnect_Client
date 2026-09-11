@@ -6,8 +6,9 @@ import type {
   ShopOwner,
   ShopOwnerCreationOutcome,
   ShopOwnerInput,
+  ShopOwnerUpdateInput,
 } from '../../types/admin';
-import { apiGet, apiGetPaged, apiPost, describeApiError } from '../api';
+import { apiGet, apiGetPaged, apiPatch, apiPost, describeApiError } from '../api';
 import { toShopOwner, userRoleCodec, type ApiUser } from '../mappers';
 
 /**
@@ -40,10 +41,8 @@ const OWNER_WRITE_TIMEOUT_MS = 60_000;
 /* -------------------------------------------------------------------------- */
 
 /**
- * FR-2 — the owner accounts, newest first (the server's own order).
- *
- * Rows carry no shop association: `GET /users` selects without `shopUsers`, so
- * `owner.shops` is empty here for every row and only `getShopOwner` fills it.
+ * FR-2 — the owner accounts, newest first (the server's own order), each with
+ * the shops it holds.
  */
 export async function getShopOwners(
   search: string,
@@ -71,44 +70,69 @@ export async function getShopOwner(ownerId: string): Promise<ShopOwner> {
 /**
  * FR-2 — hand a set of shops to an owner.
  *
- * `POST /shops/:id/assign-owner` takes one shop, so this walks them in
- * sequence and records each result. Sequential rather than parallel: the calls
- * write the same `ShopUser` table and an admin reading a failure needs the
- * shops named in the order they were listed, not in whichever order the
- * requests happened to settle.
+ * `POST /shops/:id/assign-owner` takes one shop, and each call answers only
+ * after the server has emailed the owner. Walking them in sequence made the
+ * admin wait for one mail round trip per shop, so they run together: each call
+ * claims a different shop row, and `allSettled` still reports the results in
+ * the order the shops were listed.
  *
  * Never throws for a partial failure — the caller shows what landed and what
- * to retry. It throws only when the caller asked for nothing.
+ * to retry.
  */
 export async function assignShopsToOwner(
   ownerId: string,
   shops: AssignedShopSummary[],
 ): Promise<ShopAssignmentOutcome> {
+  const results = await Promise.allSettled(
+    shops.map(shop =>
+      apiPost<{ inviteError?: string } | undefined>(
+        `/shops/${shop.id}/assign-owner`,
+        { userId: ownerId },
+        { timeoutMs: OWNER_WRITE_TIMEOUT_MS },
+      ),
+    ),
+  );
+
   const assigned: AssignedShopSummary[] = [];
   const failed: ShopAssignmentOutcome['failed'] = [];
   const inviteErrors: string[] = [];
 
-  for (const shop of shops) {
-    try {
-      const result = await apiPost<{ inviteError?: string }>(
-        `/shops/${shop.id}/assign-owner`,
-        { userId: ownerId },
-        { timeoutMs: OWNER_WRITE_TIMEOUT_MS },
-      );
-      if (result.inviteError) {
-        inviteErrors.push(`${shop.name}: ${result.inviteError}`);
-      }
-      assigned.push(shop);
-    } catch (error) {
-      failed.push({ shop, message: describeApiError(error) });
+  results.forEach((result, index) => {
+    const shop = shops[index];
+    if (result.status === 'rejected') {
+      failed.push({ shop, message: describeApiError(result.reason) });
+      return;
     }
-  }
+    assigned.push(shop);
+    if (result.value?.inviteError) {
+      inviteErrors.push(`${shop.name}: ${result.value.inviteError}`);
+    }
+  });
 
   return {
     assigned,
     failed,
     inviteError: inviteErrors.length > 0 ? inviteErrors.join('; ') : undefined,
   };
+}
+
+/**
+ * FR-2 — correct an owner's name, sign-in number or email.
+ *
+ * `PATCH /users/:id` answers without `shopUsers`, so the returned owner has no
+ * shops; callers invalidate the detail rather than trusting it for that.
+ */
+export async function updateShopOwner(
+  ownerId: string,
+  input: ShopOwnerUpdateInput,
+): Promise<ShopOwner> {
+  return toShopOwner(
+    await apiPatch<ApiUser>(`/users/${ownerId}`, {
+      name: input.name,
+      mobileNumber: input.phone,
+      email: input.email,
+    }),
+  );
 }
 
 /**
@@ -140,7 +164,10 @@ export async function createShopOwner(
     { timeoutMs: OWNER_WRITE_TIMEOUT_MS },
   );
 
-  const owner = await getShopOwner(result.user.id).catch(() => toShopOwner(result.user));
+  // Built from the response rather than re-read: the endpoint links every
+  // selected shop or fails, so the input shops are exactly what landed, and a
+  // second round trip only delayed the profile the admin lands on.
+  const owner: ShopOwner = { ...toShopOwner(result.user), shops: input.shops };
 
   return {
     owner,

@@ -136,9 +136,9 @@ export function toShop(api: ApiShop): Shop {
 /* -------------------------------------------------------------------------- */
 
 /**
- * A `/users` row. `shopUsers` is returned by `GET /users/:id` only — the list
- * route selects without it — which is why `toShopOwner` yields an empty `shops`
- * array rather than throwing on a list row.
+ * A `/users` row. `shopUsers` comes back from `GET /users` and `GET /users/:id`
+ * but not from the write routes, which is why `toShopOwner` yields an empty
+ * `shops` array rather than throwing when it is absent.
  */
 export type ApiUser = {
   id: string;
