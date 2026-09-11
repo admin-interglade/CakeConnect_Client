@@ -123,7 +123,7 @@ export default function CartScreen() {
           disabled={cart.cutoffPassed}
           style={styles.repeatButton}
         />
-        <AppButton
+        {/* <AppButton
           label={strings.cart.repeatWeekday}
           icon="calendar-refresh-outline"
           variant="outline"
@@ -131,7 +131,7 @@ export default function CartScreen() {
           loading={cart.isRepeating}
           disabled={cart.cutoffPassed}
           style={styles.repeatButton}
-        />
+        /> */}
       </View>
 
       {/* FR-11 — say plainly where the order currently lives. */}
