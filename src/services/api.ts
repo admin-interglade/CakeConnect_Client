@@ -99,6 +99,12 @@ export type RequestOptions = {
    * no ambient credential to borrow.
    */
   authToken?: string;
+  /**
+   * Override `REQUEST_TIMEOUT_MS` for one call. For writes the server only
+   * answers after slow side effects (sending mail), where giving up early
+   * reports a failure for work that in fact succeeded.
+   */
+  timeoutMs?: number;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -343,11 +349,16 @@ httpClient.interceptors.response.use(
  * because it suppresses the stored session that would otherwise have worked.
  */
 function withAuth(options?: RequestOptions): AxiosRequestConfig {
+  const timeout: AxiosRequestConfig = options?.timeoutMs
+    ? { timeout: options.timeoutMs }
+    : {};
+
   if (!options?.authToken) {
-    return {};
+    return timeout;
   }
 
   return {
+    ...timeout,
     headers: { Authorization: `Bearer ${options.authToken}` },
     // Read back off the config in the 401 handler.
     usesExplicitToken: true,
