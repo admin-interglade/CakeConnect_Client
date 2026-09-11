@@ -14,7 +14,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
   AppButton,
   AppText,
-  Avatar,
+  //Avatar,
   CardCarousel,
   DateRangePicker,
   ErrorState,
@@ -39,7 +39,7 @@ import {
   borderRadius,
   colors,
   iconSize,
-  imageSize,
+  //imageSize,
   layout,
   spacing,
   strings,
@@ -192,11 +192,11 @@ export default function AdminDashboard() {
         <OfflineBanner visible={isStale} />
 
         <View style={styles.identity}>
-          <Avatar
+          {/* <Avatar
             name={user?.name ?? 'Admin'}
             source={user?.photoUri ? { uri: user.photoUri } : undefined}
             size={imageSize.avatarSmall}
-          />
+          /> */}
           <DateRangePicker
             value={range}
             onChange={setRange}

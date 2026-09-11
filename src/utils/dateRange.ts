@@ -68,7 +68,7 @@ export function resolveRange(preset: DateRangePreset, current?: DateRange): Date
 }
 
 /** The range every admin screen opens on. */
-export const defaultRange = (): DateRange => resolveRange('thisMonth');
+export const defaultRange = (): DateRange => resolveRange('today');
 
 /** Rejects reversed or malformed bounds before they reach the API. */
 export function isValidRange(from: string, to: string): boolean {
