@@ -625,9 +625,9 @@ export type ApiSalesReport = {
 
 export const toTopProducts = (api: ApiSalesReport): TopProductPoint[] =>
   (api.byProduct ?? [])
-    .filter(row => row?.productId)
+    .filter(row => row?.productId || row?.productName || row?.name)
     .map(row => ({
-      productId: String(row.productId),
+      productId: String(row.productId ?? row.productName ?? row.name),
       name: row.name ?? row.productName ?? String(row.productId),
       unit: row.unit ?? '',
       quantity: num(row.quantity),
