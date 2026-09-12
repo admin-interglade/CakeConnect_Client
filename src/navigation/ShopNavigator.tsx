@@ -19,7 +19,8 @@ import NotificationSettings from '../screens/shop/notifications/NotificationSett
 import MoreScreen from '../screens/shop/more/MoreScreen';
 
 import { Icon } from '../components/ui';
-import { colors, iconSize, layout, spacing, strings } from '../constants';
+import { colors, iconSize, strings } from '../constants';
+import { tabBarScreenOptions } from './tabBarOptions';
 import {
   type ShopHomeStackParamList,
   type ShopLedgerStackParamList,
@@ -118,15 +119,7 @@ export default function ShopNavigator() {
       initialRouteName="HomeTab"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          minHeight: layout.minTouchTarget + spacing.md,
-          paddingTop: spacing.xs,
-          paddingBottom: spacing.xs,
-        },
+        ...tabBarScreenOptions,
         tabBarIcon: tabBarIcons[route.name],
       })}
     >

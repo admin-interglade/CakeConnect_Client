@@ -17,7 +17,8 @@ import CutoffSettings from '../screens/admin/cutoff/CutoffSettings';
 import OffersList from '../screens/admin/offers/OffersList';
 import OfferDetails from '../screens/admin/offers/OfferDetails';
 import { Icon } from '../components/ui';
-import { colors, iconSize, layout, spacing } from '../constants';
+import { colors, iconSize } from '../constants';
+import { tabBarScreenOptions } from './tabBarOptions';
 import {
   type AdminCatalogueStackParamList,
   type AdminDashboardStackParamList,
@@ -121,15 +122,7 @@ export default function AdminNavigator() {
       initialRouteName="DashboardTab"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          minHeight: layout.minTouchTarget + spacing.md,
-          paddingTop: spacing.xs,
-          paddingBottom: spacing.xs,
-        },
+        ...tabBarScreenOptions,
         tabBarIcon: tabBarIcons[route.name],
       })}
     >
