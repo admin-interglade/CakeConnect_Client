@@ -1,4 +1,4 @@
-const API_HOST = 'http://192.168.1.44:4001';
+const API_HOST = 'http://192.168.1.70:4000';
  
 export const API_BASE_URL = `${API_HOST}/api/v1`;
  
