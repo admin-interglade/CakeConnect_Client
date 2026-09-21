@@ -41,7 +41,8 @@ export const nextDeliveryDate = (): string => addDays(toApiDate(new Date()), 1);
  * See docs/api-gaps.md G7.
  */
 export function isOrderDateFilterSupported(filters: ShopOrderFilters): boolean {
-  return filters.range.from === filters.range.to;
+  // No range means no date filter was asked for, so there is nothing to miss.
+  return !filters.range || filters.range.from === filters.range.to;
 }
 
 /** FR-22 — this shop's orders, one tab per stage of the FR-40 flow. */
@@ -57,7 +58,7 @@ export async function getShopOrders(
       ? { status: orderStatusCodec.toApi(filters.status) }
       : {}),
     ...(filters.search.trim() ? { search: filters.search.trim() } : {}),
-    ...(isOrderDateFilterSupported(filters)
+    ...(filters.range && isOrderDateFilterSupported(filters)
       ? { deliveryDate: filters.range.from }
       : {}),
     // FR-4 — a single-outlet owner is already scoped by the server; this only
@@ -65,7 +66,11 @@ export async function getShopOrders(
     ...(shopId ? { shopId } : {}),
   });
 
-  return { ...page, items: page.items.map(toOrder) };
+  // `NO_ORDER_PLACED` placeholders from the cut-off job are not orders, and
+  // `toOrder` throws on them — one would fail the whole list. See `getTodaysOrder`.
+  const real = page.items.filter(item => orderStatusCodec.isKnown(String(item.status)));
+
+  return { ...page, items: real.map(toOrder) };
 }
 
 export async function getShopOrder(orderId: string): Promise<Order> {

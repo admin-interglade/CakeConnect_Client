@@ -397,7 +397,11 @@ export type NotificationSetting = {
 export type ShopOrderFilters = {
   search: string;
   status: OrderStatus | 'all';
-  range: DateRange;
+  /**
+   * Omitted by default: orders are always placed for tomorrow (FR-7), so a
+   * "today" range hid the order the shop had just placed.
+   */
+  range?: DateRange;
 };
 
 /** FR-23 — the transaction list is filterable and searchable. */

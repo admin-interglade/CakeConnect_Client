@@ -10,7 +10,6 @@ import { describeApiError } from '../../services/api';
 import { useToast } from '../../components/feedback';
 import { strings } from '../../constants';
 import { queryKeys } from '../queryKeys';
-import { defaultRange } from '../../utils/dateRange';
 import { useActiveShop } from './useActiveShop';
 import type { Order, Pagination } from '../../types/admin';
 import type { ShopOrderFilters } from '../../types/shop';
@@ -18,7 +17,6 @@ import type { ShopOrderFilters } from '../../types/shop';
 export const defaultShopOrderFilters = (): ShopOrderFilters => ({
   search: '',
   status: 'all',
-  range: defaultRange(),
 });
 
 export const defaultShopOrderPagination: Pagination = { page: 1, limit: 15 };
