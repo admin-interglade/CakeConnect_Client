@@ -137,8 +137,27 @@ export async function getTomorrowsOrder(shopId?: string): Promise<Order | null> 
  * one as an order would put a phantom row on the track.
  */
 export async function getTodaysOrder(shopId?: string): Promise<Order | null> {
-  const deliveryDate = toApiDate(new Date());
+  return getLatestOrderFor(toApiDate(new Date()), shopId);
+}
 
+/**
+ * FR-22 — tomorrow's order for the home dashboard, whatever stage it reached.
+ *
+ * `getTomorrowsOrder` stops at SUBMITTED because the cart only cares about an
+ * order it can adopt or must not duplicate. The dashboard has to keep showing
+ * the order once it is accepted, in production or dispatched — reading those
+ * as "no order" made the card fall back to the local cart and show "Draft".
+ */
+export async function getTomorrowsTrackedOrder(
+  shopId?: string,
+): Promise<Order | null> {
+  return getLatestOrderFor(nextDeliveryDate(), shopId);
+}
+
+async function getLatestOrderFor(
+  deliveryDate: string,
+  shopId?: string,
+): Promise<Order | null> {
   const page = await apiGetPaged<ApiOrder>('/orders', {
     deliveryDate,
     page: 1,

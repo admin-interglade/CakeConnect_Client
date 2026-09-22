@@ -8,7 +8,7 @@ import {
 } from '../../services/shop';
 import { describeApiError } from '../../services/api';
 import { queryKeys } from '../queryKeys';
-import { defaultRange } from '../../utils/dateRange';
+import { resolveRange } from '../../utils/dateRange';
 import { useActiveShop } from './useActiveShop';
 import type { Pagination } from '../../types/admin';
 import type { Invoice, Transaction, TransactionFilters } from '../../types/shop';
@@ -16,7 +16,8 @@ import type { Invoice, Transaction, TransactionFilters } from '../../types/shop'
 export const defaultTransactionFilters = (): TransactionFilters => ({
   search: '',
   type: 'all',
-  range: defaultRange(),
+  // A ledger read for today alone is nearly always empty; open on the month.
+  range: resolveRange('thisMonth'),
 });
 
 export const defaultTransactionPagination: Pagination = { page: 1, limit: 25 };

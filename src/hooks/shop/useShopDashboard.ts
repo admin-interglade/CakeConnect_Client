@@ -5,7 +5,7 @@ import {
   getShopCredit,
   getShopDashboard,
   getTodaysOrder,
-  getTomorrowsOrder,
+  getTomorrowsTrackedOrder,
 } from '../../services/shop';
 import { describeApiError } from '../../services/api';
 import { isMissingEndpoint } from '../../services/mappers';
@@ -81,10 +81,10 @@ export function useShopDashboard(range: DateRange): ShopDashboardResult {
         enabled,
       },
       {
-        // Shares its key with `useCart`, so the home screen and the cart agree
-        // about tomorrow's order and fetch it once between them.
-        queryKey: queryKeys.shop.tomorrow(shopId),
-        queryFn: () => getTomorrowsOrder(shopId),
+        // Not the cart's `tomorrow` query: that one stops at SUBMITTED, while
+        // the dashboard follows the order through accepted and dispatched.
+        queryKey: queryKeys.shop.tomorrowTrack(shopId),
+        queryFn: () => getTomorrowsTrackedOrder(shopId),
         enabled,
       },
       {

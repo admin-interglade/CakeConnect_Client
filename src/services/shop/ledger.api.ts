@@ -2,6 +2,7 @@ import type { Paginated, Pagination } from '../../types/admin';
 import type { Transaction, TransactionFilters } from '../../types/shop';
 import { apiGetPaged } from '../api';
 import { toLedgerEntry, type ApiLedgerEntry } from '../mappers';
+import { toApiRangeParams } from '../../utils/dateRange';
 
 /**
  * The shop's own ledger — FR-23.
@@ -31,8 +32,7 @@ export async function getTransactions(
   const page = await apiGetPaged<ApiLedgerEntry>('/ledger', {
     page: pagination.page,
     limit: pagination.limit,
-    from: filters.range.from,
-    to: filters.range.to,
+    ...toApiRangeParams(filters.range),
     // FR-4 — narrows a multi-outlet login to the selected outlet.
     ...(shopId ? { shopId } : {}),
   });

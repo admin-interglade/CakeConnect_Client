@@ -1078,6 +1078,24 @@ export const strings = {
       continueOrder: 'Continue Order',
       viewOrder: 'View Order',
       closed: 'Ordering is closed for tomorrow',
+      /** Unsent cart or server draft, before the cut-off. */
+      draftMessage: 'Not sent yet. Submit it before the cut-off to confirm.',
+      /** A draft still unsent when the cut-off passed. */
+      missedMessage:
+        "This order wasn't submitted before the cut-off, so it won't be delivered.",
+      cancelledOpen:
+        'This order was cancelled. You can place a new one before the cut-off.',
+      cancelledClosed:
+        'This order was cancelled and ordering is now closed for tomorrow.',
+      /** One line per stage an order moves through once submitted. */
+      statusMessage: {
+        submitted: 'Submitted. Waiting for the bakery to accept it.',
+        accepted: 'Accepted. It is scheduled for production.',
+        in_production: 'Your order is being prepared.',
+        dispatched: 'Dispatched. Your order is on its way.',
+        delivered: 'Delivered.',
+        invoiced: 'Delivered and invoiced.',
+      },
     },
 
     /* Financial summary — FR-20 */
@@ -1099,6 +1117,12 @@ export const strings = {
       today: "Today's Order",
       tomorrow: "Tomorrow's Order",
       none: 'No order',
+      /** Tomorrow, before the cut-off, with nothing placed. */
+      notPlacedYet: 'Not placed yet',
+      /** A day whose cut-off has passed with no order sent. */
+      noOrderPlaced: 'No order placed',
+      /** A draft that was still unsent at the cut-off. */
+      notSubmitted: 'Not submitted',
       unavailable: 'Not available',
       empty: 'No orders to track yet. Your first order appears here.',
     },
@@ -1133,6 +1157,8 @@ export const strings = {
     pack: (size: string) => `Packs of ${size}`,
     offerBadge: 'Offer',
     perUnit: (unit: string) => `per ${unit}`,
+    pricePerUnit: (price: string, unit: string) => `${price}/${unit}`,
+    packLabel: (size: string) => `Pack: ${size}`,
     added: (name: string) => `${name} added to the cart.`,
     availabilityNote:
       'A product withdrawn for tomorrow only is not flagged here — the order will say so when you submit.',

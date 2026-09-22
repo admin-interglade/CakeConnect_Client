@@ -2,6 +2,7 @@ import type { DateRange, Paginated, Pagination } from '../../types/admin';
 import type { Invoice } from '../../types/shop';
 import { apiGet, apiGetPaged } from '../api';
 import { toInvoice, type ApiInvoice } from '../mappers';
+import { toApiRangeParams } from '../../utils/dateRange';
 
 /** Download/PDF transport for an invoice; shared with the admin side. */
 export { downloadInvoicePdf } from '../invoicePdf';
@@ -23,8 +24,7 @@ export async function getShopInvoices(
   const page = await apiGetPaged<ApiInvoice>('/invoices', {
     page: pagination.page,
     limit: pagination.limit,
-    from: range.from,
-    to: range.to,
+    ...toApiRangeParams(range),
     ...(shopId ? { shopId } : {}),
   });
 

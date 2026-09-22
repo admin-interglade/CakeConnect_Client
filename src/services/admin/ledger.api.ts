@@ -5,6 +5,7 @@ import type {
 } from '../../types/admin';
 import { apiGetPaged, apiPost } from '../api';
 import { toLedgerEntry, type ApiLedgerEntry } from '../mappers';
+import { toApiRangeParams } from '../../utils/dateRange';
 
 /**
  * Ledger — FR-23 transaction list, FR-39 adjustments and credit notes.
@@ -26,8 +27,7 @@ export async function getShopLedger(
 ): Promise<LedgerEntry[]> {
   const page = await apiGetPaged<ApiLedgerEntry>('/ledger', {
     shopId,
-    from: range.from,
-    to: range.to,
+    ...toApiRangeParams(range),
     page: 1,
     limit: 200,
   });

@@ -70,6 +70,16 @@ export function resolveRange(preset: DateRangePreset, current?: DateRange): Date
 /** The range every admin screen opens on. */
 export const defaultRange = (): DateRange => resolveRange('today');
 
+/**
+ * The range as API query bounds covering whole IST days. Sending bare
+ * `YYYY-MM-DD` let the server read `to` as UTC midnight, so a range never
+ * included the day it ended on — a "today" range was always empty.
+ */
+export const toApiRangeParams = (range: Pick<DateRange, 'from' | 'to'>) => ({
+  from: new Date(`${range.from}T00:00:00.000+05:30`).toISOString(),
+  to: new Date(`${range.to}T23:59:59.999+05:30`).toISOString(),
+});
+
 /** Rejects reversed or malformed bounds before they reach the API. */
 export function isValidRange(from: string, to: string): boolean {
   const shape = /^\d{4}-\d{2}-\d{2}$/;

@@ -1,7 +1,14 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppButton, AppText, Icon, Skeleton, StatusBadge } from '../../../components';
+import {
+  AppButton,
+  AppText,
+  Icon,
+  Skeleton,
+  StatusBadge,
+  type BadgeStatus,
+} from '../../../components';
 import {
   borderRadius,
   colors,
@@ -13,7 +20,7 @@ import { formatCurrency, formatDuration, formatShortDate } from '../../../utils/
 import type { Order } from '../../../types/admin';
 
 type TomorrowOrderCardProps = {
-  /** The draft or submitted order for tomorrow, if one exists. */
+  /** Tomorrow's order at whatever stage it has reached, if one exists. */
   order?: Order;
   /** `YYYY-MM-DD`; absent while the effective cut-off is still loading. */
   deliveryDate?: string;
@@ -23,6 +30,12 @@ type TomorrowOrderCardProps = {
   cutoffAvailable: boolean;
   /** True while either the order or the cut-off is still in flight. */
   loading?: boolean;
+  /**
+   * Products are in the local cart but no server draft exists yet. Shown as a
+   * draft too — to the shop an order started and not sent is a draft, whether
+   * or not it has been saved.
+   */
+  hasLocalDraft?: boolean;
   onPlaceOrder: () => void;
   onContinueOrder: () => void;
   onViewOrder: () => void;
@@ -41,6 +54,11 @@ const URGENT_SECONDS = 30 * 60;
  *   draft        -> "Continue Order", into the cart
  *   submitted    -> "View Order", into the order detail
  *
+ * The cut-off changes what those states mean, so it changes the badge and the
+ * message too: a draft still unsent when it passes will never be delivered,
+ * and saying "Draft" then would suggest it still can be. A cancelled order
+ * reopens ordering until the cut-off, as if there were none.
+ *
  * The cut-off sits between the date and the action for a reason: it is the
  * constraint that makes the action urgent, and burying it below the button
  * would be showing someone a deadline after they have already decided.
@@ -56,6 +74,7 @@ export default function TomorrowOrderCard({
   cutoffPassed,
   cutoffAvailable,
   loading = false,
+  hasLocalDraft = false,
   onPlaceOrder,
   onContinueOrder,
   onViewOrder,
@@ -70,13 +89,50 @@ export default function TomorrowOrderCard({
     );
   }
 
-  const submitted = Boolean(order) && order?.status !== 'draft';
+  const cancelled = order?.status === 'cancelled';
+  const live = cancelled ? undefined : order;
+  const submitted = Boolean(live) && live?.status !== 'draft';
+  // Anything short of submitted — a server draft or an unsaved cart — is a
+  // draft on this card.
+  const draft = !submitted && (Boolean(live) || hasLocalDraft);
+  // FR-10 — a draft left unsent at the cut-off will not be delivered.
+  const missed = draft && cutoffPassed;
+
+  const badgeStatus: BadgeStatus | null =
+    submitted && live
+      ? live.status
+      : missed
+        ? 'no_order'
+        : draft
+          ? 'draft'
+          : cancelled
+            ? 'cancelled'
+            : cutoffPassed
+              ? 'no_order'
+              : null;
+
+  const message = (() => {
+    const copy = strings.shopHome.tomorrow;
+    if (submitted && live && live.status in copy.statusMessage) {
+      return copy.statusMessage[live.status as keyof typeof copy.statusMessage];
+    }
+    if (missed) {
+      return copy.missedMessage;
+    }
+    if (draft) {
+      return copy.draftMessage;
+    }
+    if (cancelled) {
+      return cutoffPassed ? copy.cancelledClosed : copy.cancelledOpen;
+    }
+    return cutoffPassed ? copy.closed : copy.noneMessage;
+  })();
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <AppText variant="kicker">{strings.shopHome.tomorrow.kicker}</AppText>
-        {order ? <StatusBadge status={order.status} compact /> : null}
+        {badgeStatus ? <StatusBadge status={badgeStatus} compact /> : null}
       </View>
 
       <AppText variant="h1" style={styles.date}>
@@ -85,7 +141,7 @@ export default function TomorrowOrderCard({
           : strings.shopHome.tomorrow.dateUnknown}
       </AppText>
 
-      {submitted && order ? (
+      {submitted && live ? (
         /* Once submitted, the value is the fact that matters and the countdown
            becomes context — so they sit on one row, value first. */
         <View style={styles.valueRow}>
@@ -94,8 +150,8 @@ export default function TomorrowOrderCard({
               {strings.shopHome.tomorrow.orderValue}
             </AppText>
             <AppText variant="h2" style={styles.value}>
-              {order.total > 0
-                ? formatCurrency(order.total)
+              {live.total > 0
+                ? formatCurrency(live.total)
                 : strings.shopHome.tomorrow.valueUnavailable}
             </AppText>
           </View>
@@ -114,13 +170,13 @@ export default function TomorrowOrderCard({
         />
       )}
 
-      {!order ? (
-        <AppText variant="bodySecondary" style={styles.empty}>
-          {cutoffPassed
-            ? strings.shopHome.tomorrow.closed
-            : strings.shopHome.tomorrow.noneMessage}
-        </AppText>
-      ) : null}
+      <AppText
+        variant="bodySecondary"
+        color={missed ? colors.error : undefined}
+        style={styles.empty}
+      >
+        {message}
+      </AppText>
 
       {submitted ? (
         <AppButton
@@ -132,11 +188,11 @@ export default function TomorrowOrderCard({
       ) : (
         <AppButton
           label={
-            order
+            draft
               ? strings.shopHome.tomorrow.continueOrder
               : strings.shopHome.tomorrow.placeOrder
           }
-          onPress={order ? onContinueOrder : onPlaceOrder}
+          onPress={draft ? onContinueOrder : onPlaceOrder}
           // FR-10 — after the cut-off tomorrow's order is closed to edits.
           disabled={cutoffPassed}
           style={styles.action}
