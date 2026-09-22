@@ -36,11 +36,11 @@ import OfferComposer from './OfferComposer';
 import OfferBanner from './components/OfferBanner';
 import OfferStatusPill from './components/OfferStatusPill';
 import { discountBadgeLabel } from './components/offerPresentation';
-import type { AdminDashboardStackParamList } from '../../../navigation/types';
+import type { AdminCatalogueStackParamList } from '../../../navigation/types';
 import type { OfferInput } from '../../../types/admin';
 import type { Offer } from '../../../types/shop';
 
-type Route = RouteProp<AdminDashboardStackParamList, 'OfferDetails'>;
+type Route = RouteProp<AdminCatalogueStackParamList, 'OfferDetails'>;
 
 type PendingAction = 'publish' | 'expire' | 'withdraw' | null;
 

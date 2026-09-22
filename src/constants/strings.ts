@@ -100,18 +100,6 @@ export const strings = {
         'Daily order-value trend is not available from the server yet.',
       loadError: 'Chart data could not be loaded. Try refreshing the dashboard.',
     },
-    /** FR-32 to FR-35 — the live-offers strip, beside the recent-orders one. */
-    offers: {
-      title: 'Offers',
-      subtitle: 'Live across the network right now',
-      empty: 'No offers are live right now.',
-      /**
-       * Distinct from `empty`: "nothing is running" and "we could not ask" look
-       * identical on a blank strip and mean opposite things.
-       */
-      unavailable: 'Offers could not be loaded.',
-    },
-    actionAllOffers: 'All offers',
 
     recentOrders: 'Recent orders',
     recent: {
@@ -539,11 +527,12 @@ export const strings = {
   /** FR-5, FR-6, FR-15 — catalogue, price lists and categories. */
   catalogue: {
     title: 'Catalogue & price lists',
-    subtitle: 'Products, categories and the prices each shop pays.',
+    subtitle: 'Products, categories, the prices each shop pays and offers.',
     tabs: {
       products: 'Products',
       categories: 'Categories',
       priceLists: 'Price lists',
+      offers: 'Offers',
     },
 
     searchPlaceholder: 'Search by name or SKU',

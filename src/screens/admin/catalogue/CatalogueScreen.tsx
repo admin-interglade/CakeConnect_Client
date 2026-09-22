@@ -46,6 +46,7 @@ import { describeApiError } from '../../../services/api';
 import { uploadImage } from '../../../services/admin';
 import { pickImage } from '../../../services/device';
 import { formatCurrency, formatNumber } from '../../../utils/format';
+import OffersList from '../offers/OffersList';
 import type {
   Category,
   Pagination,
@@ -55,9 +56,12 @@ import type {
   ProductStatus,
 } from '../../../types/admin';
 
-type CatalogueTab = 'products' | 'categories' | 'priceLists';
+type CatalogueTab = 'products' | 'categories' | 'priceLists' | 'offers';
 
-/** FR-5 / FR-6 / FR-15 — products, categories and price lists in one screen. */
+/**
+ * FR-5 / FR-6 / FR-15 — products, categories and price lists in one screen,
+ * with FR-32 to FR-35 offers beside the price lists.
+ */
 export default function CatalogueScreen() {
   const navigation = useNavigation();
 
@@ -112,6 +116,9 @@ export default function CatalogueScreen() {
       label: strings.catalogue.tabs.priceLists,
       badge: priceLists.length,
     },
+    // No badge: the offer count lives in the offers query, which only runs
+    // while this tab is open.
+    { key: 'offers', label: strings.catalogue.tabs.offers },
   ];
 
   const activeFilterCount =
@@ -500,6 +507,10 @@ export default function CatalogueScreen() {
           </InlineMessage>
         </View>
       ) : null}
+
+      {/* FR-32 to FR-35 — mounted only while selected, so the offers query
+          does not run behind the other tabs. */}
+      {tab === 'offers' ? <OffersList /> : null}
 
       <ModalForm
         visible={productForm !== null}

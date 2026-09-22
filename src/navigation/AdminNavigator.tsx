@@ -14,7 +14,6 @@ import OwnersList from '../screens/admin/shops/OwnersList';
 import ProductionDetail from '../screens/admin/dashboard/ProductionDetail';
 import CatalogueScreen from '../screens/admin/catalogue/CatalogueScreen';
 import CutoffSettings from '../screens/admin/cutoff/CutoffSettings';
-import OffersList from '../screens/admin/offers/OffersList';
 import OfferDetails from '../screens/admin/offers/OfferDetails';
 import { Icon } from '../components/ui';
 import { colors, iconSize } from '../constants';
@@ -67,11 +66,6 @@ function DashboardStack() {
         name="CutoffSettings"
         component={CutoffSettings}
       />
-
-      {/* FR-32 to FR-35 — offer authoring, reached from the dashboard. */}
-      <DashboardStackNav.Screen name="Offers" component={OffersList} />
-      <DashboardStackNav.Screen name="OfferDetails" component={OfferDetails} />
-
     </DashboardStackNav.Navigator>
   );
 }
@@ -104,6 +98,9 @@ function CatalogueStack() {
   return (
     <CatalogueStackNav.Navigator screenOptions={stackOptions}>
       <CatalogueStackNav.Screen name="Catalogue" component={CatalogueScreen} />
+      {/* FR-32 to FR-35 — offers are listed and composed in the catalogue's
+          offers tab; a card pushes its detail here. */}
+      <CatalogueStackNav.Screen name="OfferDetails" component={OfferDetails} />
     </CatalogueStackNav.Navigator>
   );
 }
