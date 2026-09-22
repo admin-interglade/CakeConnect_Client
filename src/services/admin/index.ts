@@ -18,6 +18,7 @@
  *   cutoff.api.ts       /cutoff/*
  *   offers.api.ts       /offers/*
  *   owners.api.ts       /users/* and /shops/:id/assign-owner
+ *   uploads.api.ts      /uploads/images
  *
  * Transport (base URL, auth header, refresh, retry, envelope unwrapping) lives
  * in `services/httpClient`. Wire-to-domain translation lives in
@@ -41,3 +42,4 @@ export * from './products.api';
 export * from './priceLists.api';
 export * from './production.api';
 export * from './shops.api';
+export * from './uploads.api';

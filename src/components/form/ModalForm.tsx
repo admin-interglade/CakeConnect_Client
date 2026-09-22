@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -33,7 +34,8 @@ export type FormFieldType =
   | 'number'
   | 'textarea'
   | 'select'
-  | 'multiselect';
+  | 'multiselect'
+  | 'image';
 
 export type FormField = {
   name: string;
@@ -47,6 +49,11 @@ export type FormField = {
   options?: DropdownOption<string>[];
   /** `multiselect` only — shows the picker is still loading its options. */
   loading?: boolean;
+  /**
+   * `image` only — picks and uploads an image, resolving to its URL, or null
+   * when the user cancels. The URL can still be typed in by hand.
+   */
+  pickImage?: () => Promise<string | null>;
   /** Field-specific rule; return the message to show, or undefined when valid. */
   validate?: (value: string, values: FormValues) => string | undefined;
 };
@@ -107,6 +114,8 @@ export default function ModalForm({
   const [values, setValues] = React.useState<FormValues>(initialValues);
   const [errors, setErrors] = React.useState<FormValues>({});
   const [submitted, setSubmitted] = React.useState(false);
+  /** Name of the `image` field whose upload is in flight, if any. */
+  const [uploadingField, setUploadingField] = React.useState<string | null>(null);
 
   // Re-seed whenever the form is reopened, so an abandoned edit does not leak
   // into the next one.
@@ -115,6 +124,7 @@ export default function ModalForm({
       setValues(initialValues);
       setErrors({});
       setSubmitted(false);
+      setUploadingField(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -153,7 +163,35 @@ export default function ModalForm({
     }
   };
 
+  const handlePickImage = async (field: FormField) => {
+    if (!field.pickImage) {
+      return;
+    }
+
+    setUploadingField(field.name);
+    try {
+      const url = await field.pickImage();
+      if (url) {
+        setValues(current => ({ ...current, [field.name]: url }));
+        setErrors(current => ({ ...current, [field.name]: '' }));
+      }
+    } catch (err) {
+      setErrors(current => ({
+        ...current,
+        [field.name]: err instanceof Error && err.message
+          ? err.message
+          : strings.form.imageUploadFailed,
+      }));
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
   const handleSubmit = () => {
+    if (uploadingField) {
+      return;
+    }
+
     setSubmitted(true);
 
     const nextErrors: FormValues = {};
@@ -249,6 +287,53 @@ export default function ModalForm({
                 );
               }
 
+              if (field.type === 'image') {
+                const uploading = uploadingField === field.name;
+                return (
+                  <View key={field.name} style={styles.field}>
+                    {value ? (
+                      <Image
+                        source={{ uri: value }}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                        accessibilityLabel={field.label}
+                      />
+                    ) : null}
+                    <View style={styles.imageActions}>
+                      <AppButton
+                        label={value ? strings.form.changeImage : strings.form.chooseImage}
+                        icon="image-plus"
+                        variant="outline"
+                        onPress={() => handlePickImage(field)}
+                        loading={uploading}
+                        disabled={submitting || uploadingField !== null}
+                        style={styles.imageButton}
+                        testID={`form-${field.name}-pick`}
+                      />
+                      {value ? (
+                        <AppButton
+                          label={strings.form.removeImage}
+                          variant="link"
+                          onPress={() => setValue(field, '')}
+                          disabled={submitting || uploading}
+                        />
+                      ) : null}
+                    </View>
+                    <LabeledInput
+                      label={`${field.label}${field.required ? ' *' : ''}`}
+                      value={value}
+                      onChangeText={next => setValue(field, next)}
+                      error={error || undefined}
+                      placeholder={field.placeholder ?? 'https://'}
+                      editable={!uploading}
+                      keyboardType="url"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                );
+              }
+
               if (field.type === 'select') {
                 return (
                   <View key={field.name} style={styles.field}>
@@ -314,6 +399,7 @@ export default function ModalForm({
               label={submitLabel}
               onPress={handleSubmit}
               loading={submitting}
+              disabled={uploadingField !== null}
               style={styles.footerButton}
             />
           </View>
@@ -343,6 +429,20 @@ const styles = StyleSheet.create({
   body: { padding: spacing.lg, paddingBottom: spacing.xxl },
   field: { marginBottom: spacing.lg },
   fieldMessage: { marginTop: spacing.xs },
+  imagePreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceSunken,
+    marginBottom: spacing.md,
+  },
+  imageActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  imageButton: { flex: 1 },
   formError: { marginTop: spacing.sm },
   footer: {
     flexDirection: 'row',

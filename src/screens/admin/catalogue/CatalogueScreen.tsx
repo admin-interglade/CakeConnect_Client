@@ -42,6 +42,9 @@ import {
   useCatalogue,
   useCatalogueMutations,
 } from '../../../hooks';
+import { describeApiError } from '../../../services/api';
+import { uploadImage } from '../../../services/admin';
+import { pickImage } from '../../../services/device';
 import { formatCurrency, formatNumber } from '../../../utils/format';
 import type {
   Category,
@@ -120,6 +123,19 @@ export default function CatalogueScreen() {
     categories.find(category => category.id === product.categoryId)?.name ??
     strings.catalogue.card.uncategorised;
 
+  /** Gallery pick, then upload; the form stores the returned URL. */
+  const pickProductImage = React.useCallback(async (): Promise<string | null> => {
+    const picked = await pickImage();
+    if (!picked?.base64) {
+      return null;
+    }
+    try {
+      return await uploadImage(picked.base64);
+    } catch (caught) {
+      throw new Error(describeApiError(caught));
+    }
+  }, []);
+
   const productFields = React.useMemo<FormField[]>(
     () => [
       {
@@ -146,7 +162,12 @@ export default function CatalogueScreen() {
         })),
       },
       { name: 'description', label: strings.catalogue.fields.description, type: 'textarea' },
-      { name: 'imageUrl', label: strings.catalogue.fields.imageUrl, type: 'text' },
+      {
+        name: 'imageUrl',
+        label: strings.catalogue.fields.imageUrl,
+        type: 'image',
+        pickImage: pickProductImage,
+      },
       {
         name: 'unit',
         label: strings.catalogue.fields.unit,
@@ -191,7 +212,7 @@ export default function CatalogueScreen() {
         ],
       },
     ],
-    [categories],
+    [categories, pickProductImage],
   );
 
   const submitProduct = (values: FormValues) => {

@@ -1,18 +1,24 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 /**
  * Device capability helpers used by the onboarding screens.
  *
- * NOTE: biometrics and the image picker are still stubs — no native modules
- * back them yet. Wire `react-native-biometrics` and `react-native-image-picker`
- * into the functions below and the screens need no change; they only depend on
- * the shapes declared here.
+ * NOTE: biometrics and `pickProfilePhoto` are still stubs. Wire
+ * `react-native-biometrics` and `pickImage` into them and the screens need no
+ * change; they only depend on the shapes declared here.
  */
 
 export type BiometricKind = 'faceId' | 'touchId' | 'fingerprint' | 'none';
 
-export type PickedImage = { uri: string; fileName?: string; fileSize?: number };
+export type PickedImage = {
+  uri: string;
+  fileName?: string;
+  fileSize?: number;
+  /** Present when the image was picked with `includeBase64`, for uploading. */
+  base64?: string;
+};
 
 const INSTALLATION_ID_KEY = 'cakeconnect.installationId';
 
@@ -87,4 +93,38 @@ export async function pickProfilePhoto(): Promise<PickedImage | null> {
   // TODO: launchImageLibrary({ mediaType: 'photo', selectionLimit: 1 }).
   // Returning null leaves the initials avatar in place.
   return null;
+}
+
+/**
+ * Opens the photo library for a single image, downscaled so an upload stays
+ * well under the server's 5 MB limit. Null when the user cancels.
+ */
+export async function pickImage(): Promise<PickedImage | null> {
+  const result = await launchImageLibrary({
+    mediaType: 'photo',
+    selectionLimit: 1,
+    includeBase64: true,
+    maxWidth: 1600,
+    maxHeight: 1600,
+    quality: 0.8,
+  });
+
+  if (result.didCancel) {
+    return null;
+  }
+  if (result.errorCode) {
+    throw new Error(result.errorMessage ?? result.errorCode);
+  }
+
+  const asset = result.assets?.[0];
+  if (!asset?.uri) {
+    return null;
+  }
+
+  return {
+    uri: asset.uri,
+    fileName: asset.fileName,
+    fileSize: asset.fileSize,
+    base64: asset.base64,
+  };
 }

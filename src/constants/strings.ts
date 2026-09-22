@@ -44,6 +44,14 @@ export const strings = {
     done: 'Done',
   },
 
+  /** Shared by `ModalForm` fields. */
+  form: {
+    chooseImage: 'Choose from gallery',
+    changeImage: 'Change image',
+    removeImage: 'Remove',
+    imageUploadFailed: 'Could not upload the image. Try again.',
+  },
+
   dashboard: {
     title: 'Network overview',
     greeting: (name: string) => `Signed in as ${name}`,
