@@ -78,7 +78,11 @@ export async function getOrderStatusCounts(
   // The tabs must keep their badges while one of them is selected, so the
   // status filter is dropped and the rest of the filters are shared.
   const shared = orderQuery({ ...filters, status: 'all' });
-  const statuses = orderStatusCodec.domainValues;
+  // Drafts belong to the shop owner and the server never returns them to an
+  // admin, so there is no count to ask for.
+  const statuses = orderStatusCodec.domainValues.filter(
+    status => status !== 'draft',
+  );
 
   const [all, ...totals] = await Promise.all([
     apiGetPaged<ApiOrder>('/orders', { ...shared, page: 1, limit: 1 }),
