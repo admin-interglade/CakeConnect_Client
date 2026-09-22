@@ -150,6 +150,8 @@ export type AdminTabParamList = {
  */
 export type AdminCatalogueStackParamList = {
   Catalogue: undefined;
+  /** FR-32, FR-35 — one offer, opened from the catalogue's offers tab. */
+  OfferDetails: { offerId: string };
 };
 
 export type AdminDashboardStackParamList = {
@@ -158,10 +160,6 @@ export type AdminDashboardStackParamList = {
   ProductionPlan: { deliveryDate?: string } | undefined;
   ProductionDetail: { deliveryDate: string; productId: string };
   CutoffSettings: undefined;
-  /** FR-32 to FR-35 — the offers the franchise has published. */
-  Offers: undefined;
-  /** FR-32, FR-35 — one offer: its terms, its reach and the actions on it. */
-  OfferDetails: { offerId: string };
 };
 
 export type AdminShopsStackParamList = {

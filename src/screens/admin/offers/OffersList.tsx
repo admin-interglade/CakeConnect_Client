@@ -6,16 +6,14 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import {
   AppButton,
   AppText,
+  Dropdown,
   EmptyState,
   ErrorState,
   InlineMessage,
   Pagination,
-  Screen,
-  ScreenHeader,
   SectionCard,
-  SegmentedTabs,
   SkeletonCards,
-  type SegmentedTab,
+  type DropdownOption,
 } from '../../../components';
 import { colors, spacing, strings } from '../../../constants';
 import {
@@ -29,26 +27,27 @@ import OfferCard from './components/OfferCard';
 import OfferComposer from './OfferComposer';
 import type { OfferFilters, Pagination as PageState } from '../../../types/admin';
 import type { OfferStatus } from '../../../types/shop';
-import type { AdminDashboardStackParamList } from '../../../navigation/types';
+import type { AdminCatalogueStackParamList } from '../../../navigation/types';
 
-type Nav = StackNavigationProp<AdminDashboardStackParamList>;
+type Nav = StackNavigationProp<AdminCatalogueStackParamList>;
 
 type OfferTab = OfferStatus | 'all';
 
 /**
  * FR-32 to FR-35 — the offers the franchise has published, and the place they
- * are composed.
+ * are composed. Rendered inside the catalogue's "Offers" tab rather than as a
+ * screen of its own, so it brings no header and relies on the catalogue's
+ * scroll view.
  *
- * The card at the top is the screen's most important content, not a disclaimer.
- * An admin publishing an offer here is making three assumptions that this
- * backend does not honour — that scheduling publishes, that regions target, and
- * that redemptions count — and each of them, acted on, produces a decision the
- * network cannot deliver. They are stated before the list rather than after it.
+ * "New offer" comes first because composing is what an admin opens this tab
+ * for; the list follows, and the backend's limits close the tab the way the
+ * region notice closes the price-list tab.
  *
- * The tabs are one status each because `GET /offers` takes one `status` and
- * pages on it. Merging "expired" and "withdrawn" into an "ended" tab would need
- * two queries whose pages cannot be interleaved without inventing an order the
- * server never sent.
+ * The status filter is one status at a time because `GET /offers` takes one
+ * `status` and pages on it. Merging "expired" and "withdrawn" into an "ended"
+ * option would need two queries whose pages cannot be interleaved without
+ * inventing an order the server never sent. It is a dropdown rather than a
+ * second tab strip so it does not stack under the catalogue's own tabs.
  */
 export default function OffersList() {
   const navigation = useNavigation<Nav>();
@@ -60,19 +59,11 @@ export default function OffersList() {
   const filters: OfferFilters = { status: tab };
   const pagination: PageState = { ...defaultOfferPagination, page };
 
-  const { offers, total, stranded, isLoading, isError, error, refetch } =
+  const { offers, total, stranded, isLoading, isError, error, isRefetching, refetch } =
     useAdminOffers(filters, pagination);
   const mutations = useOfferMutations();
 
   const today = toApiDate(new Date());
-
-  const tabs: SegmentedTab<OfferTab>[] = [
-    { key: 'all', label: strings.adminOffers.tabs.all },
-    { key: 'active', label: strings.adminOffers.tabs.active },
-    { key: 'scheduled', label: strings.adminOffers.tabs.scheduled },
-    { key: 'expired', label: strings.adminOffers.tabs.expired },
-    { key: 'withdrawn', label: strings.adminOffers.tabs.withdrawn },
-  ];
 
   const changeTab = (next: OfferTab) => {
     setTab(next);
@@ -80,53 +71,36 @@ export default function OffersList() {
     setPage(1);
   };
 
+  const composeButton = (
+    <AppButton
+      label={strings.adminOffers.newOffer}
+      icon="plus"
+      onPress={() => setComposing(true)}
+      style={styles.compose}
+    />
+  );
+
   if (isError) {
     return (
-      <Screen>
-        <ScreenHeader
-          title={strings.adminOffers.title}
-          onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
-        />
-        <ErrorState message={error} onRetry={refetch} />
-      </Screen>
+      <View>
+        {composeButton}
+        <ErrorState message={error} onRetry={refetch} retrying={isRefetching} />
+        {renderComposer()}
+      </View>
     );
   }
 
   return (
-    <Screen scrollable>
-      <ScreenHeader
-        title={strings.adminOffers.title}
-        subtitle={strings.adminOffers.subtitle}
-        onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
+    <View>
+      {composeButton}
+
+      <Dropdown
+        label={strings.catalogue.statusLabel}
+        value={tab}
+        options={statusOptions}
+        onChange={changeTab}
+        style={styles.filter}
       />
-
-      {/*
-        FR-33, FR-35 — said before anything is composed. Each line is a thing
-        the backend does not do, in the order an admin would trip over them.
-      */}
-      <SectionCard
-        title={strings.adminOffers.limitsTitle}
-        subtitle={strings.adminOffers.limitsSubtitle}
-      >
-        <InlineMessage tone="warning">
-          {strings.adminOffers.schedulingDoesNotPublish}
-        </InlineMessage>
-        <InlineMessage tone="warning" style={styles.spaced}>
-          {strings.adminOffers.noRegionTargeting}
-        </InlineMessage>
-        <InlineMessage tone="info" style={styles.spaced}>
-          {strings.adminOffers.redemptionsAlwaysZero}
-        </InlineMessage>
-      </SectionCard>
-
-      <AppButton
-        label={strings.adminOffers.newOffer}
-        icon="plus"
-        onPress={() => setComposing(true)}
-        style={styles.compose}
-      />
-
-      <SegmentedTabs tabs={tabs} value={tab} onChange={changeTab} style={styles.tabs} />
 
       {/*
         The two states nothing else will ever notice. Scoped to the page that is
@@ -168,8 +142,6 @@ export default function OffersList() {
               ? strings.adminOffers.emptyMessage
               : strings.adminOffers.emptyFilteredMessage
           }
-          actionLabel={tab === 'all' ? strings.adminOffers.newOffer : undefined}
-          onAction={tab === 'all' ? () => setComposing(true) : undefined}
         />
       ) : (
         <View>
@@ -203,6 +175,32 @@ export default function OffersList() {
         </View>
       )}
 
+      {/*
+        FR-33, FR-35 — each line is a thing the backend does not do, in the
+        order an admin would trip over them.
+      */}
+      <SectionCard
+        title={strings.adminOffers.limitsTitle}
+        subtitle={strings.adminOffers.limitsSubtitle}
+        style={styles.limits}
+      >
+        <InlineMessage tone="warning">
+          {strings.adminOffers.schedulingDoesNotPublish}
+        </InlineMessage>
+        <InlineMessage tone="warning" style={styles.spaced}>
+          {strings.adminOffers.noRegionTargeting}
+        </InlineMessage>
+        <InlineMessage tone="info" style={styles.spaced}>
+          {strings.adminOffers.redemptionsAlwaysZero}
+        </InlineMessage>
+      </SectionCard>
+
+      {renderComposer()}
+    </View>
+  );
+
+  function renderComposer() {
+    return (
       <OfferComposer
         visible={composing}
         submitting={mutations.create.isPending}
@@ -213,14 +211,23 @@ export default function OffersList() {
         }
         onDismiss={() => setComposing(false)}
       />
-    </Screen>
-  );
+    );
+  }
 }
 
+const statusOptions: DropdownOption<OfferTab>[] = [
+  { value: 'all', label: strings.adminOffers.tabs.all },
+  { value: 'active', label: strings.adminOffers.tabs.active },
+  { value: 'scheduled', label: strings.adminOffers.tabs.scheduled },
+  { value: 'expired', label: strings.adminOffers.tabs.expired },
+  { value: 'withdrawn', label: strings.adminOffers.tabs.withdrawn },
+];
+
 const styles = StyleSheet.create({
-  compose: { marginBottom: spacing.lg },
-  tabs: { marginBottom: spacing.md },
+  compose: { marginVertical: spacing.md },
+  filter: { marginBottom: spacing.md },
   spaced: { marginTop: spacing.sm },
   notice: { marginBottom: spacing.md },
   count: { marginBottom: spacing.sm },
+  limits: { marginTop: spacing.md },
 });
