@@ -4,6 +4,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import { AppButton, AppText, Icon, QuantityStepper } from '../../../components';
 import {
   borderRadius,
+  borderWidth,
   colors,
   iconSize,
   spacing,
@@ -30,9 +31,8 @@ type CatalogueProductCardProps = {
  * same place. That keeps the row height stable while scrolling and means the
  * quantity is adjusted where the product is, not only in the cart.
  *
- * MOQ and pack size are stated on the card rather than only enforced by the
- * stepper — a quantity that jumps from 1 to 12 with no explanation reads as a
- * bug.
+ * Pack size is stated on the card rather than only enforced by the stepper —
+ * a quantity that jumps from 1 to 12 with no explanation reads as a bug.
  */
 function CatalogueProductCard({
   product,
@@ -45,123 +45,124 @@ function CatalogueProductCard({
 
   return (
     <View style={styles.card}>
-      <View style={styles.row}>
-        {product.imageUrl ? (
-          <Image
-            source={{ uri: product.imageUrl }}
-            style={styles.image}
-            accessibilityIgnoresInvertColors
+      {product.imageUrl ? (
+        <Image
+          source={{ uri: product.imageUrl }}
+          style={styles.image}
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <View style={[styles.image, styles.imageFallback]}>
+          <Icon
+            name="cake-variant-outline"
+            size={iconSize.lg}
+            color={colors.primary}
           />
-        ) : (
-          <View style={[styles.image, styles.imageFallback]}>
-            <Icon
-              name="cake-variant-outline"
-              size={iconSize.lg}
-              color={colors.primary}
-            />
-          </View>
-        )}
+        </View>
+      )}
 
-        <View style={styles.body}>
-          <View style={styles.titleRow}>
-            <AppText variant="h3" numberOfLines={2} style={styles.name}>
-              {product.name}
-            </AppText>
-            {/* FR-34 — an offer names this product. The discount itself is
-                applied by the franchise at invoicing, so this is a flag, not a
-                price change. */}
-            {product.offerIds.length > 0 ? (
-              <View style={styles.offerBadge}>
-                <AppText variant="caption" color={colors.primary}>
-                  {strings.shopCatalogue.offerBadge}
-                </AppText>
-              </View>
-            ) : null}
-          </View>
+      <View style={styles.body}>
+        <AppText variant="h3" numberOfLines={2} style={styles.name}>
+          {product.name}
+        </AppText>
 
-          <AppText variant="caption" numberOfLines={1}>
-            {[
-              product.categoryName,
-              product.moq > 1
-                ? strings.shopCatalogue.moq(formatNumber(product.moq), product.unit)
-                : null,
-              product.packSize > 1
-                ? strings.shopCatalogue.pack(formatNumber(product.packSize))
-                : null,
-            ]
-              .filter(Boolean)
-              .join('  ·  ')}
+        <AppText style={styles.price} color={colors.primary} numberOfLines={1}>
+          {strings.shopCatalogue.pricePerUnit(
+            formatCurrency(product.price),
+            product.unit,
+          )}
+        </AppText>
+
+        <View style={styles.metaRow}>
+          {/* FR-34 — an offer names this product. The discount itself is
+              applied by the franchise at invoicing, so this is a flag, not a
+              price change. */}
+          {product.offerIds.length > 0 ? (
+            <View style={styles.offerBadge}>
+              <AppText style={styles.chipText} color={colors.primary}>
+                {strings.shopCatalogue.offerBadge}
+              </AppText>
+            </View>
+          ) : null}
+          <AppText style={styles.metaText} numberOfLines={1}>
+            {strings.shopCatalogue.packLabel(formatNumber(product.packSize))}
           </AppText>
-
-          <View style={styles.priceRow}>
-            <AppText variant="h3">{formatCurrency(product.price)}</AppText>
-            <AppText variant="caption">
-              {strings.shopCatalogue.perUnit(product.unit)}
-            </AppText>
-          </View>
         </View>
       </View>
 
-      <View style={styles.action}>
-        {inCart ? (
-          <QuantityStepper
-            value={quantity}
-            onChange={onChangeQuantity}
-            min={0}
-            step={product.packSize}
-            disabled={disabled}
-            accessibilityLabel={product.name}
-            decreaseLabel={`${strings.shortSupply.decrease} ${product.name}`}
-            increaseLabel={`${strings.shortSupply.increase} ${product.name}`}
-          />
-        ) : (
-          <AppButton
-            label={strings.shopCatalogue.add}
-            icon="plus"
-            variant="outline"
-            onPress={onAdd}
-            disabled={disabled}
-            accessibilityHint={product.name}
-          />
-        )}
-      </View>
+      {inCart ? (
+        <QuantityStepper
+          variant="pill"
+          value={quantity}
+          onChange={onChangeQuantity}
+          min={0}
+          step={product.packSize}
+          disabled={disabled}
+          accessibilityLabel={product.name}
+          decreaseLabel={`${strings.shortSupply.decrease} ${product.name}`}
+          increaseLabel={`${strings.shortSupply.increase} ${product.name}`}
+          style={styles.action}
+        />
+      ) : (
+        <AppButton
+          label={strings.shopCatalogue.add}
+          icon="plus"
+          variant="outline"
+          onPress={onAdd}
+          disabled={disabled}
+          accessibilityHint={product.name}
+          style={styles.addButton}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    borderWidth: borderWidth.hairline,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: spacing.md,
   },
-  row: { flexDirection: 'row', gap: spacing.md },
   image: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: borderRadius.md,
     backgroundColor: colors.surfaceSunken,
   },
   imageFallback: { alignItems: 'center', justifyContent: 'center' },
-  body: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  name: { flex: 1 },
+  body: { flex: 1, gap: spacing.xxs },
+  name: { fontSize: 15, lineHeight: 20 },
+  price: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
+  },
   offerBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.circle,
+    borderRadius: borderRadius.xs,
     backgroundColor: colors.primarySoft,
   },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+  chipText: { fontSize: 11, lineHeight: 14, fontWeight: '600' },
+  metaText: { fontSize: 11, lineHeight: 14, color: colors.textMuted },
+  action: { alignSelf: 'center' },
+  // Same height and rounding as the pill stepper that replaces it, so the row
+  // does not jump when the product is added.
+  addButton: {
+    alignSelf: 'center',
+    minHeight: 40,
+    height: 40,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.circle,
   },
-  action: { alignItems: 'flex-end' },
 });
 
 export default React.memo(CatalogueProductCard);

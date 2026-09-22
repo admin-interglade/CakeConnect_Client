@@ -25,6 +25,11 @@ type QuantityStepperProps = {
   increaseLabel?: string;
   style?: ViewStyle;
   testID?: string;
+  /**
+   * `pill` is the rounded catalogue look: a soft minus, a filled plus and a
+   * fully rounded track. Behaviour is identical to the default.
+   */
+  variant?: 'default' | 'pill';
 };
 
 /**
@@ -47,7 +52,9 @@ export default function QuantityStepper({
   increaseLabel = 'Increase',
   style,
   testID,
+  variant = 'default',
 }: QuantityStepperProps) {
+  const pill = variant === 'pill';
   const [draft, setDraft] = React.useState(String(value));
 
   // The parent clamps and can reject a value, so the field follows it rather
@@ -68,9 +75,17 @@ export default function QuantityStepper({
   };
 
   return (
-    <View style={[styles.container, disabled && styles.disabled, style]}>
+    <View
+      style={[
+        styles.container,
+        pill && styles.pillContainer,
+        disabled && styles.disabled,
+        style,
+      ]}
+    >
       <StepButton
         icon="minus"
+        pill={pill}
         label={decreaseLabel}
         disabled={disabled || value <= min}
         onPress={() => onChange(clamp(value - step))}
@@ -87,11 +102,13 @@ export default function QuantityStepper({
         returnKeyType="done"
         selectTextOnFocus
         accessibilityLabel={accessibilityLabel}
-        style={styles.input}
+        style={[styles.input, pill && styles.pillInput]}
       />
 
       <StepButton
         icon="plus"
+        pill={pill}
+        filled={pill}
         label={increaseLabel}
         disabled={disabled || value >= max}
         onPress={() => onChange(clamp(value + step))}
@@ -105,12 +122,23 @@ function StepButton({
   label,
   disabled,
   onPress,
+  pill = false,
+  filled = false,
 }: {
   icon: string;
   label: string;
   disabled: boolean;
   onPress: () => void;
+  pill?: boolean;
+  /** Solid primary background with a light icon — the pill's plus. */
+  filled?: boolean;
 }) {
+  const iconColor = filled
+    ? colors.onPrimary
+    : disabled
+      ? colors.textMuted
+      : colors.primary;
+
   return (
     <Pressable
       onPress={onPress}
@@ -121,20 +149,24 @@ function StepButton({
       hitSlop={layout.hitSlop}
       style={({ pressed }) => [
         styles.button,
-        disabled && styles.buttonDisabled,
+        pill && styles.pillButton,
+        disabled && (pill ? styles.pillButtonDisabled : styles.buttonDisabled),
+        filled && styles.filledButton,
+        filled && disabled && styles.filledButtonDisabled,
         pressed && !disabled && styles.pressed,
       ]}
     >
       <Icon
         name={icon}
         size={iconSize.sm}
-        color={disabled ? colors.textMuted : colors.primary}
+        color={iconColor}
       />
     </Pressable>
   );
 }
 
 const stepperHeight = 36;
+const pillHeight = 40;
 
 const styles = StyleSheet.create({
   container: {
@@ -159,6 +191,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: colors.surfaceSunken },
   pressed: { opacity: 0.7 },
+  pillContainer: {
+    height: pillHeight,
+    paddingHorizontal: spacing.xs,
+    borderRadius: borderRadius.circle,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  pillButton: {
+    width: pillHeight - spacing.sm,
+    height: pillHeight - spacing.sm,
+    borderRadius: borderRadius.circle,
+    backgroundColor: colors.primarySoft,
+  },
+  pillButtonDisabled: { backgroundColor: colors.surfaceMuted },
+  filledButton: { backgroundColor: colors.primary },
+  filledButtonDisabled: { backgroundColor: colors.primaryDisabled },
+  pillInput: {
+    minWidth: spacing.xxxl + spacing.sm,
+    fontWeight: '600',
+  },
   input: {
     ...(textVariants.body as object),
     minWidth: spacing.xxxl,
