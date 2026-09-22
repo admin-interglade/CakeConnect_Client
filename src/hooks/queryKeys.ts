@@ -184,6 +184,8 @@ export const queryKeys = {
     order: (orderId: string) => ['shop', 'order', orderId] as const,
     /** FR-22 — the draft or submitted order for the next delivery date. */
     tomorrow: (shopId: string) => ['shop', 'tomorrow', shopId] as const,
+    /** FR-22 — tomorrow's order at any stage, for the home dashboard. */
+    tomorrowTrack: (shopId: string) => ['shop', 'tomorrowTrack', shopId] as const,
     /** FR-22 — today's order, at whatever stage it has reached. */
     today: (shopId: string) => ['shop', 'today', shopId] as const,
 

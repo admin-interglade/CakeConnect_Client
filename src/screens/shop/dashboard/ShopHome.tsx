@@ -209,6 +209,7 @@ export default function ShopHome() {
           cutoffPassed={passed}
           cutoffAvailable={!cutoffFailed}
           loading={isLoading && !track.tomorrow}
+          hasLocalDraft={cart.lines.length > 0 && !cart.alreadySubmitted}
           onPlaceOrder={() => navigation.navigate('ShopCatalogue')}
           onContinueOrder={() => navigation.navigate('Cart')}
           onViewOrder={() =>
@@ -238,6 +239,7 @@ export default function ShopHome() {
             tomorrow={track.tomorrow}
             loading={isLoading && !track.today && !track.tomorrow}
             available={track.available}
+            tomorrowCutoffPassed={passed}
             onOpen={orderId =>
               navigation.navigate('OrdersTab', {
                 screen: 'ShopOrderDetails',

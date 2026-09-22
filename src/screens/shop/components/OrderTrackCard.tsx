@@ -19,6 +19,8 @@ type OrderTrackCardProps = {
   loading?: boolean;
   /** False when the lookup failed, as opposed to there being no order. */
   available: boolean;
+  /** Whether tomorrow's cut-off has passed. Today's always has. */
+  tomorrowCutoffPassed?: boolean;
   onOpen: (orderId: string) => void;
 };
 
@@ -32,12 +34,17 @@ type OrderTrackCardProps = {
  * is a fact about the shop's day; the second is a fact about the request. A
  * card that showed "No order" because a fetch failed would tell a shop it had
  * forgotten to order when it had not.
+ *
+ * Each row reads its order against that day's cut-off. Today's has always
+ * passed, so a draft there was never sent and an empty day had no order
+ * placed; tomorrow's reads the same way once its own cut-off passes.
  */
 export default function OrderTrackCard({
   today,
   tomorrow,
   loading = false,
   available,
+  tomorrowCutoffPassed = false,
   onOpen,
 }: OrderTrackCardProps) {
   if (loading) {
@@ -71,11 +78,13 @@ export default function OrderTrackCard({
       <Row
         label={strings.shopHome.track.today}
         order={today}
+        cutoffPassed
         onPress={today ? () => onOpen(today.id) : undefined}
       />
       <Row
         label={strings.shopHome.track.tomorrow}
         order={tomorrow}
+        cutoffPassed={tomorrowCutoffPassed}
         onPress={tomorrow ? () => onOpen(tomorrow.id) : undefined}
         last
       />
@@ -99,26 +108,37 @@ function Row({
   label,
   order,
   unavailable = false,
+  cutoffPassed = false,
   last = false,
   onPress,
 }: {
   label: string;
   order?: Order;
   unavailable?: boolean;
+  cutoffPassed?: boolean;
   last?: boolean;
   onPress?: () => void;
 }) {
+  // FR-10 — a draft still unsent at its cut-off was never placed.
+  const missed = order?.status === 'draft' && cutoffPassed;
+
   const status = unavailable
     ? strings.shopHome.track.unavailable
-    : order
-      ? orderStatusLabels[order.status]
-      : strings.shopHome.track.none;
+    : missed
+      ? strings.shopHome.track.notSubmitted
+      : order
+        ? orderStatusLabels[order.status]
+        : cutoffPassed
+          ? strings.shopHome.track.noOrderPlaced
+          : strings.shopHome.track.notPlacedYet;
 
   const tone = unavailable
     ? colors.textMuted
-    : order
-      ? statusTone[order.status]
-      : colors.textMuted;
+    : missed
+      ? colors.error
+      : order
+        ? statusTone[order.status]
+        : colors.textMuted;
 
   const body = (
     <View style={[styles.row, !last && styles.rowDivider]}>
