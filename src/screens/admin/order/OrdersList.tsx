@@ -143,7 +143,7 @@ export default function OrdersList() {
 
   // `bulkUpdateStatus` is deliberately not used: there is no bulk endpoint,
   // so the queue moves orders one at a time. See docs/api-gaps.md G13.
-  const { updateStatus, exportList } = useOrderMutations();
+  const { updateStatus } = useOrderMutations();
 
   const isPendingView = filters.status === 'pending_cutoff';
   const selectionMode = selected.length > 0;
@@ -239,18 +239,6 @@ export default function OrdersList() {
       <ScreenHeader
         title={strings.orders.title}
         subtitle={strings.orders.subtitle}
-        actions={[
-          {
-            icon: 'file-delimited-outline',
-            label: strings.common.exportCsv,
-            onPress: () => exportList.mutate({ filters, format: 'csv' }),
-          },
-          {
-            icon: 'file-pdf-box',
-            label: strings.common.exportPdf,
-            onPress: () => exportList.mutate({ filters, format: 'pdf' }),
-          },
-        ]}
       />
 
       <SearchInput

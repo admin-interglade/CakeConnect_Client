@@ -37,7 +37,7 @@ import {
   orderStatusShortLabels,
 } from '../../../utils/format';
 import type { AdminOrdersStackParamList } from '../../../navigation/types';
-import type { ShortSupplyLine, Order, OrderItem, OrderStatus } from '../../../types/admin';
+import type { ShortSupplyLine, OrderItem, OrderStatus } from '../../../types/admin';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../store/store';
 import { downloadInvoicePdf } from '../../../services/admin';
@@ -231,11 +231,11 @@ export default function OrderDetails() {
         subtitle={strings.orderDetails.subtitle(order.shopName, order.orderNumber)}
         onBack={() => navigation.goBack()}
         actions={[
-          {
-            icon: 'printer-outline',
-            label: strings.orderDetails.printOrder,
-            onPress: () => {},
-          },
+          // {
+          //   icon: 'printer-outline',
+          //   label: strings.orderDetails.printOrder,
+          //   onPress: () => {},
+          // },
           {
             icon: 'file-pdf-box',
             label: strings.orderDetails.exportPdf,
@@ -294,6 +294,46 @@ export default function OrderDetails() {
               <StatusBadge status="cancelled" compact />
             </View>
           ) : null}
+        </SectionCard>
+
+        <SectionCard title={strings.orderDetails.sectionShop} style={styles.secondary}>
+          <Pressable
+            onPress={() =>
+              navigation.navigate('ShopDetails', { shopId: order.shopId, mode: 'view' })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${order.shopName}`}
+            style={styles.shopLink}
+          >
+            <AppText variant="link">{`${order.shopName} · ${order.shopCode}`}</AppText>
+            <Icon name="chevron-right" size={iconSize.md} color={colors.primary} />
+          </Pressable>
+
+          <SummaryRow
+            label={strings.orders.deliveryDate}
+            value={formatDate(order.deliveryDate)}
+          />
+          <SummaryRow
+            label={strings.orderDetails.submittedAt}
+            value={
+              order.submittedAt
+                ? formatDateTime(order.submittedAt)
+                : strings.orderDetails.notSubmitted
+            }
+          />
+          <SummaryRow
+            label={strings.orderDetails.cutoffAt}
+            value={formatDateTime(order.cutoffAt)}
+          />
+          <SummaryRow label={strings.shopDetails.fields.ownerName} value={order.ownerName} />
+          <SummaryRow
+            label={strings.shopDetails.fields.ownerPhone}
+            value={order.ownerPhone}
+          />
+          <SummaryRow
+            label={strings.shopDetails.fields.ownerEmail}
+            value={order.ownerEmail ?? '-'}
+          />
         </SectionCard>
 
         {/* FR-5, FR-7 — the priced lines with the shop's per-item instructions. */}
@@ -378,50 +418,11 @@ export default function OrderDetails() {
           ) : null}
         </View>
 
-        <SectionCard title={strings.orderDetails.sectionShop} style={styles.secondary}>
-          <Pressable
-            onPress={() =>
-              navigation.navigate('ShopDetails', { shopId: order.shopId, mode: 'view' })
-            }
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${order.shopName}`}
-            style={styles.shopLink}
-          >
-            <AppText variant="link">{`${order.shopName} · ${order.shopCode}`}</AppText>
-            <Icon name="chevron-right" size={iconSize.md} color={colors.primary} />
-          </Pressable>
-
-          <SummaryRow
-            label={strings.orders.deliveryDate}
-            value={formatDate(order.deliveryDate)}
-          />
-          <SummaryRow
-            label={strings.orderDetails.submittedAt}
-            value={
-              order.submittedAt
-                ? formatDateTime(order.submittedAt)
-                : strings.orderDetails.notSubmitted
-            }
-          />
-          <SummaryRow
-            label={strings.orderDetails.cutoffAt}
-            value={formatDateTime(order.cutoffAt)}
-          />
-          <SummaryRow label={strings.shopDetails.fields.ownerName} value={order.ownerName} />
-          <SummaryRow
-            label={strings.shopDetails.fields.ownerPhone}
-            value={order.ownerPhone}
-          />
-          <SummaryRow
-            label={strings.shopDetails.fields.ownerEmail}
-            value={order.ownerEmail ?? '-'}
-          />
-        </SectionCard>
-
+      
         {/* FR-40 timeline, PRD §3 actor and timestamp per transition. */}
-        <SectionCard title={strings.orders.timelineTitle}>
+        {/* <SectionCard title={strings.orders.timelineTitle}>
           <Timeline order={order} />
-        </SectionCard>
+        </SectionCard> */}
       </ScrollView>
 
       <ConfirmDialog
@@ -546,53 +547,53 @@ function ItemRow({ item, first }: { item: OrderItem; first: boolean }) {
 }
 
 /** Renders the FR-40 history with the actor and timestamp of each transition. */
-function Timeline({ order }: { order: Order }) {
-  const reached = new Map(order.statusHistory.map(event => [event.status, event]));
+// function Timeline({ order }: { order: Order }) {
+//   const reached = new Map(order.statusHistory.map(event => [event.status, event]));
 
-  return (
-    <View>
-      {orderStatusFlow.map(status => {
-        const event = reached.get(status);
-        const done = Boolean(event);
+//   return (
+//     <View>
+//       {orderStatusFlow.map(status => {
+//         const event = reached.get(status);
+//         const done = Boolean(event);
 
-        return (
-          <View key={status} style={styles.timelineRow}>
-            <Icon
-              name={done ? 'check-circle' : 'circle-outline'}
-              size={iconSize.md}
-              color={done ? colors.success : colors.textMuted}
-            />
+//         return (
+//           <View key={status} style={styles.timelineRow}>
+//             <Icon
+//               name={done ? 'check-circle' : 'circle-outline'}
+//               size={iconSize.md}
+//               color={done ? colors.success : colors.textMuted}
+//             />
 
-            <View style={styles.timelineText}>
-              <AppText
-                variant="body"
-                color={done ? colors.textPrimary : colors.textMuted}
-              >
-                {orderStatusLabels[status]}
-              </AppText>
-              {event ? (
-                <AppText variant="caption">
-                  {`${formatDateTime(event.at)} · ${event.actor}`}
-                </AppText>
-              ) : null}
-            </View>
-          </View>
-        );
-      })}
+//             <View style={styles.timelineText}>
+//               <AppText
+//                 variant="body"
+//                 color={done ? colors.textPrimary : colors.textMuted}
+//               >
+//                 {orderStatusLabels[status]}
+//               </AppText>
+//               {event ? (
+//                 <AppText variant="caption">
+//                   {`${formatDateTime(event.at)} · ${event.actor}`}
+//                 </AppText>
+//               ) : null}
+//             </View>
+//           </View>
+//         );
+//       })}
 
-      {order.status === 'cancelled' ? (
-        <View style={styles.timelineRow}>
-          <Icon name="close-circle" size={iconSize.md} color={colors.error} />
-          <View style={styles.timelineText}>
-            <AppText variant="body" color={colors.error}>
-              {orderStatusLabels.cancelled}
-            </AppText>
-          </View>
-        </View>
-      ) : null}
-    </View>
-  );
-}
+//       {order.status === 'cancelled' ? (
+//         <View style={styles.timelineRow}>
+//           <Icon name="close-circle" size={iconSize.md} color={colors.error} />
+//           <View style={styles.timelineText}>
+//             <AppText variant="body" color={colors.error}>
+//               {orderStatusLabels.cancelled}
+//             </AppText>
+//           </View>
+//         </View>
+//       ) : null}
+//     </View>
+//   );
+// }
 
 function TotalRow({
   label,
